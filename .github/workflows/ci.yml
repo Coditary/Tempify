@@ -1,0 +1,333 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - "**"
+    tags:
+      - "v*"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  REQPACK_RUNTIME_TAG: v1.2.14
+
+jobs:
+  build-test:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x86_64
+            runner: ubuntu-24.04
+            platform: linux
+            arch: x86_64
+            vcpkg_triplet: x64-linux
+            python_cmd: python3
+            binary_path: build/tempify
+            reqpack_asset: rqp-v1.2.14-x86_64-linux.tar.gz
+            plugin_test: true
+          - name: linux-aarch64
+            runner: ubuntu-24.04-arm
+            platform: linux
+            arch: aarch64
+            vcpkg_triplet: arm64-linux
+            python_cmd: python3
+            binary_path: build/tempify
+            reqpack_asset: rqp-v1.2.14-aarch64-linux.tar.gz
+            plugin_test: true
+          - name: macos-x86_64
+            runner: macos-15-intel
+            platform: macos
+            arch: x86_64
+            vcpkg_triplet: x64-osx
+            python_cmd: python3
+            binary_path: build/tempify
+            reqpack_asset: ""
+            plugin_test: false
+          - name: macos-aarch64
+            runner: macos-15
+            platform: macos
+            arch: aarch64
+            vcpkg_triplet: arm64-osx
+            python_cmd: python3
+            binary_path: build/tempify
+            reqpack_asset: rqp-v1.2.14-aarch64-darwin.tar.gz
+            plugin_test: true
+          - name: windows-x86_64
+            runner: windows-2025
+            platform: windows
+            arch: x86_64
+            vcpkg_triplet: x64-windows-static
+            python_cmd: python
+            binary_path: build/Release/tempify.exe
+            cmake_arch: x64
+            plugin_test: false
+          - name: windows-aarch64
+            runner: windows-11-arm
+            platform: windows
+            arch: aarch64
+            vcpkg_triplet: arm64-windows-static
+            python_cmd: python
+            binary_path: build/Release/tempify.exe
+            cmake_arch: ARM64
+            plugin_test: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Linux prerequisites
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build pkg-config zstd
+
+      - name: Install macOS prerequisites
+        if: runner.os == 'macOS'
+        run: |
+          brew update
+          brew install ninja zstd
+
+      - name: Bootstrap vcpkg (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          set -euo pipefail
+          VCPKG_ROOT="$RUNNER_TEMP/vcpkg"
+          git clone --depth 1 https://github.com/microsoft/vcpkg.git "$VCPKG_ROOT"
+          "$VCPKG_ROOT/bootstrap-vcpkg.sh" -disableMetrics
+          echo "VCPKG_ROOT=$VCPKG_ROOT" >> "$GITHUB_ENV"
+          "$VCPKG_ROOT/vcpkg" install "lua:${{ matrix.vcpkg_triplet }}" "cli11:${{ matrix.vcpkg_triplet }}"
+
+      - name: Bootstrap vcpkg (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $VcpkgRoot = Join-Path $env:RUNNER_TEMP 'vcpkg'
+          git clone --depth 1 https://github.com/microsoft/vcpkg.git $VcpkgRoot
+          & "$VcpkgRoot\bootstrap-vcpkg.bat" -disableMetrics
+          "VCPKG_ROOT=$VcpkgRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          & "$VcpkgRoot\vcpkg.exe" install "lua:${{ matrix.vcpkg_triplet }}" "cli11:${{ matrix.vcpkg_triplet }}"
+
+      - name: Configure (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          set -euo pipefail
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
+            -DVCPKG_TARGET_TRIPLET="${{ matrix.vcpkg_triplet }}"
+
+      - name: Configure (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cmake -S . -B build -G "Visual Studio 17 2022" -A "${{ matrix.cmake_arch }}" `
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" `
+            -DVCPKG_TARGET_TRIPLET="${{ matrix.vcpkg_triplet }}"
+
+      - name: Build (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          set -euo pipefail
+          cmake --build build --parallel
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cmake --build build --config Release --parallel
+
+      - name: Test (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          set -euo pipefail
+          ctest --test-dir build --output-on-failure
+
+      - name: Test (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          ctest --test-dir build -C Release --output-on-failure
+
+      - name: Download ReqPack runtime (Unix)
+        if: runner.os != 'Windows' && matrix.plugin_test
+        run: |
+          set -euo pipefail
+          mkdir -p reqpack-runtime
+          curl -fsSL \
+            "https://github.com/Coditary/ReqPack/releases/download/${REQPACK_RUNTIME_TAG}/${{ matrix.reqpack_asset }}" \
+            -o "reqpack-runtime/${{ matrix.reqpack_asset }}"
+
+      - name: Extract ReqPack runtime (Linux)
+        if: runner.os == 'Linux' && matrix.plugin_test
+        run: |
+          set -euo pipefail
+          mkdir -p reqpack-runtime/root
+          tar -xzf "reqpack-runtime/${{ matrix.reqpack_asset }}" -C reqpack-runtime/root
+
+      - name: Extract ReqPack runtime (macOS)
+        if: runner.os == 'macOS' && matrix.plugin_test
+        run: |
+          set -euo pipefail
+          mkdir -p reqpack-runtime/root
+          tar -xzf "reqpack-runtime/${{ matrix.reqpack_asset }}" -C reqpack-runtime/root
+
+      - name: Test bundled ReqPack plugin (Unix)
+        if: runner.os != 'Windows' && matrix.plugin_test
+        run: |
+          set -euo pipefail
+          ./reqpack-runtime/root/rqp test-plugin --help >/dev/null
+          ./reqpack-runtime/root/rqp test-plugin --plugin . --preset core
+
+      - name: Package release artifact (Unix)
+        if: startsWith(github.ref, 'refs/tags/v') && runner.os != 'Windows'
+        run: |
+          set -euo pipefail
+          ${{ matrix.python_cmd }} scripts/ci/package_binary.py \
+            --version "$GITHUB_REF_NAME" \
+            --platform "${{ matrix.platform }}" \
+            --arch "${{ matrix.arch }}" \
+            --binary "${{ matrix.binary_path }}" \
+            --output-dir dist
+
+      - name: Package ReqPack artifact (Unix)
+        if: startsWith(github.ref, 'refs/tags/v') && runner.os != 'Windows'
+        run: |
+          set -euo pipefail
+          ${{ matrix.python_cmd }} scripts/ci/package_reqpack.py \
+            --version "$GITHUB_REF_NAME" \
+            --platform "${{ matrix.platform }}" \
+            --arch "${{ matrix.arch }}" \
+            --binary "${{ matrix.binary_path }}" \
+            --output-dir dist
+
+      - name: Smoke install packaged ReqPack artifact (Linux)
+        if: startsWith(github.ref, 'refs/tags/v') && runner.os == 'Linux' && matrix.arch == 'x86_64'
+        run: |
+          set -euo pipefail
+          temp_home="$RUNNER_TEMP/tempify-rqp-home"
+          rm -rf "$temp_home"
+          mkdir -p "$temp_home"
+          HOME="$temp_home" XDG_DATA_HOME="$temp_home/.local/share" ./reqpack-runtime/root/rqp install ./dist/tempify-${GITHUB_REF_NAME#v}-${{ matrix.platform }}-${{ matrix.arch }}.rqp --non-interactive
+          HOME="$temp_home" XDG_DATA_HOME="$temp_home/.local/share" "$temp_home/.local/bin/tempify" --help >/dev/null
+          test -f "$temp_home/.local/share/reqpack/plugins/tempify/run.lua"
+
+      - name: Package release artifact (Windows)
+        if: startsWith(github.ref, 'refs/tags/v') && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          & ${{ matrix.python_cmd }} scripts/ci/package_binary.py `
+            --version $env:GITHUB_REF_NAME `
+            --platform '${{ matrix.platform }}' `
+            --arch '${{ matrix.arch }}' `
+            --binary '${{ matrix.binary_path }}' `
+            --output-dir dist
+
+      - name: Upload release artifact
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/*.rqp
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build-test
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download packaged artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: dist
+
+      - name: Build ReqPack repository index
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/build_reqpack_index.py --dist-dir dist --output dist/index.json
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          if ! gh release view "$GITHUB_REF_NAME" --repo "$GH_REPO" >/dev/null 2>&1; then
+            gh release create "$GITHUB_REF_NAME" --repo "$GH_REPO" --title "Tempify $VERSION" --notes "Automated release for Tempify $VERSION."
+          fi
+          gh release edit "$GITHUB_REF_NAME" --repo "$GH_REPO" --draft=false --latest --title "Tempify $VERSION" --notes "Automated release for Tempify $VERSION."
+          gh release upload "$GITHUB_REF_NAME" dist/*.tar.gz dist/*.zip dist/*.rqp dist/index.json --repo "$GH_REPO" --clobber
+
+  docker:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build-test
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Compute image metadata
+        id: meta
+        run: |
+          set -euo pipefail
+          IMAGE_NAME=$(printf '%s' 'ghcr.io/coditary/tempify' | tr '[:upper:]' '[:lower:]')
+          VERSION="${GITHUB_REF_NAME#v}"
+          CREATED=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          echo "image_name=$IMAGE_NAME" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "created=$CREATED" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
+
+      - name: Enable QEMU
+        run: |
+          set -euo pipefail
+          docker run --privileged --rm tonistiigi/binfmt --install amd64,arm64
+
+      - name: Create buildx builder
+        run: |
+          set -euo pipefail
+          docker buildx create --name tempify-builder --use
+          docker buildx inspect --bootstrap
+
+      - name: Build and push Docker image
+        run: |
+          set -euo pipefail
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --build-arg TEMPIFY_VERSION="${{ steps.meta.outputs.version }}" \
+            --build-arg BUILD_DATE="${{ steps.meta.outputs.created }}" \
+            --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
+            -t "${{ steps.meta.outputs.image_name }}:${{ steps.meta.outputs.version }}" \
+            -t "${{ steps.meta.outputs.image_name }}:${GITHUB_REF_NAME}" \
+            -t "${{ steps.meta.outputs.image_name }}:latest" \
+            --push .

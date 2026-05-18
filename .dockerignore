@@ -1,0 +1,16 @@
+build/
+build-fetch/
+build-installcheck/
+build-local-prebyte/
+dist/
+dist-fetch/
+CMakeFiles/
+.tempify/
+CMakeCache.txt
+CTestTestfile.cmake
+DartConfiguration.tcl
+cmake_install.cmake
+install_manifest.txt
+install_manifest_*.txt
+compile_commands.json
+.git/

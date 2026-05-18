@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "templates": [
+    {
+      "id": "basic_cpp",
+      "name": "Basic C++ App",
+      "description": "Installed C++ starter template",
+      "version": "1.0.0",
+      "tags": ["cpp", "starter"],
+      "source": {
+        "type": "git",
+        "url": ".reqpack-test/fixtures/repos/primary",
+        "subdir": "basic_cpp"
+      },
+      "repository": {
+        "id": "seed",
+        "url": ".reqpack-test/fixtures/catalogs/primary/templates.json",
+        "priority": 10
+      },
+      "installedAt": "2026-05-18T00:00:00Z"
+    }
+  ]
+}

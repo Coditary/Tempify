@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "templates": [
+    {
+      "id": "basic_cpp",
+      "name": "Basic C++ App",
+      "description": "Higher priority C++ starter template",
+      "version": "1.1.0",
+      "tags": ["cpp", "starter"],
+      "source": {
+        "type": "git",
+        "url": "../../repos/primary",
+        "subdir": "basic_cpp"
+      }
+    }
+  ]
+}

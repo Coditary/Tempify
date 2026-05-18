@@ -1,0 +1,11 @@
+{
+  "templates": [
+    {
+      "id": "basic_cpp",
+      "name": "Basic C++ App",
+      "description": "Installed C++ starter template",
+      "version": "1.0.0",
+      "path": "templates/basic_cpp"
+    }
+  ]
+}

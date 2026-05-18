@@ -1,0 +1,6 @@
+template=CI Snapshot App
+slug=ci-snapshot-app
+author=Tempify
+ci=true
+provider=github
+docs=https://docs.example

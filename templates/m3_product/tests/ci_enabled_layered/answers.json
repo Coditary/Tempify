@@ -1,0 +1,6 @@
+{
+  "project_name": "Snapshot Product",
+  "language_standard": "c++23",
+  "include_ci": true,
+  "ci_provider": "github"
+}

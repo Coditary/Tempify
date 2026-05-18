@@ -1,0 +1,6 @@
+template=Snapshot App
+slug=snapshot-app
+author=Tempify
+ci=false
+provider=
+docs=

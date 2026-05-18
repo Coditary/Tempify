@@ -1,5 +1,11 @@
-start:
-	g++ -Isrc/main/include -I/home/leodora/.nxpm/packages/cpp/sol2/v3.2.2/include -O3 -o build/main src/main/cpp/*.cpp -L/usr/lib64 -llua5.4
+BUILD_DIR ?= build
 
-run:
-	./build/main
+start:
+	cmake -S . -B $(BUILD_DIR) -G Ninja
+	cmake --build $(BUILD_DIR)
+
+run: start
+	./$(BUILD_DIR)/tempify
+
+test: start
+	ctest --test-dir $(BUILD_DIR) --output-on-failure
