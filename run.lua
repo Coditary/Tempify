@@ -1,7 +1,7 @@
 plugin = {}
 
 local PLUGIN_NAME = "Tempify Template Manager"
-local PLUGIN_VERSION = "0.1.0"
+local PLUGIN_VERSION = "0.1.1"
 local GIT_BINARY = "git"
 local STATE_SCHEMA_VERSION = 1
 

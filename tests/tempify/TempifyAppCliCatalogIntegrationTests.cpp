@@ -58,7 +58,7 @@ TEST_CASE(TempifyApp_help_version_and_list_write_expected_stdout) {
     {
         ScopedStdoutCapture capture;
         REQUIRE_EQ(app.run({"--version"}), 0);
-        REQUIRE(capture.str().find("0.1.0") != std::string::npos);
+        REQUIRE(capture.str().find("0.1.1") != std::string::npos);
     }
 
     {
@@ -87,12 +87,12 @@ TEST_CASE(TempifyApp_help_and_version_aliases_work) {
     {
         ScopedStdoutCapture capture;
         REQUIRE_EQ(app.run({"version"}), 0);
-        REQUIRE(capture.str().find("0.1.0") != std::string::npos);
+        REQUIRE(capture.str().find("0.1.1") != std::string::npos);
     }
     {
         ScopedStdoutCapture capture;
         REQUIRE_EQ(app.run({"-v"}), 0);
-        REQUIRE(capture.str().find("0.1.0") != std::string::npos);
+        REQUIRE(capture.str().find("0.1.1") != std::string::npos);
     }
 }
 

@@ -202,7 +202,7 @@ TEST_CASE(TempifyApp_diff_detects_delete_candidates_from_lockfile) {
     write_text_file(target.path() / "old-managed.txt", "stale\n");
     write_text_file(target.path() / ".tempify-lock.json",
                     "{\n"
-                    "  \"tempify_version\": \"v0.1.0\",\n"
+                    "  \"tempify_version\": \"v0.1.1\",\n"
                     "  \"template\": {\n"
                     "    \"id\": \"basic_cpp\",\n"
                     "    \"name\": \"Basic C++ App\",\n"

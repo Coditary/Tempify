@@ -4,6 +4,6 @@
 
 namespace tempify {
 
-inline constexpr std::string_view VERSION = "v0.1.0";
+inline constexpr std::string_view VERSION = "v0.1.1";
 
 }
