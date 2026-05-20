@@ -1,9 +1,14 @@
 #include "TestHarness.h"
+#include "TempifyTestSupport.h"
 
+#include <filesystem>
 #include <iostream>
 #include <string_view>
 
 int main(int argc, char** argv) {
+    tempify::test_support::ensure_test_workspace_layout();
+    std::filesystem::current_path(tempify::test_support::test_workspace_root());
+
     if (argc == 2 && std::string_view(argv[1]) == "--list-tests") {
         for (const std::string& name : prebyte::test::test_names()) {
             std::cout << name << '\n';

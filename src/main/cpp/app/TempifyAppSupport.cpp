@@ -42,16 +42,17 @@ TemplateCatalog build_catalog(const std::optional<std::filesystem::path>& worksp
 
     if (workspace_templates_root.has_value()) {
         for (const auto& root : scan_template_roots(*workspace_templates_root)) {
+            TemplateInfo info;
             try {
-                TemplateInfo info = loader.summarize(root);
-                if (catalog.index.contains(info.id)) {
-                    throw TempifyError("Duplicate workspace template id found: " + info.id);
-                }
-                catalog.index[info.id] = root;
-                catalog.infos.push_back(std::move(info));
+                info = loader.summarize(root);
             } catch (const TempifyError&) {
                 continue;
             }
+            if (catalog.index.contains(info.id)) {
+                throw TempifyError("Duplicate workspace template id found: " + info.id);
+            }
+            catalog.index[info.id] = root;
+            catalog.infos.push_back(std::move(info));
         }
     }
 

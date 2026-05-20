@@ -132,13 +132,13 @@ tempify -p [prebyte-args...]
   --set namespace=app
 
 # Fragen minimal anzeigen
-./build/tempify m6_advanced --questions
+./build/tempify advanced_hooks_layout --questions
 
 # Fragen als JSON ausgeben
-./build/tempify m6_advanced --questions --json
+./build/tempify advanced_hooks_layout --questions --json
 
 # Fragen mit allen Feldern ausgeben
-./build/tempify m6_advanced --questions --full
+./build/tempify advanced_hooks_layout --questions --full
 
 # Shared-Template-Index neu aufbauen
 ./build/tempify refresh
@@ -236,7 +236,7 @@ Blockiertes `--reapply --json` bei Template-Mismatch:
     "origin_mismatch": {
       "lockfile": ".tempify-lock.json",
       "origin_template": {
-        "id": "m3_product",
+        "id": "layered_cpp_product",
         "version": "0.1.0"
       },
       "requested_template": {

@@ -16,3 +16,4 @@ build/
 /install_manifest_*.txt
 /compile_commands.json
 /scripts/ci/__pycache__/
+/tests/test_workspace/

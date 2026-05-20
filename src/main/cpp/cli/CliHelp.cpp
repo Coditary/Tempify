@@ -327,7 +327,7 @@ std::string format_render_help(const CliRequest& request) {
         "tempify basic_cpp my-app --set project_name=\"My App\"",
         "tempify basic_cpp existing-dir --reapply --json",
         "tempify basic_cpp existing-dir -s",
-        "tempify templates/basic_cpp out-dir --accept-hooks ask",
+        "tempify path/to/template out-dir --accept-hooks ask",
         "tempify reapply basic_cpp existing-dir --json",
     });
     append_section(stream, "Notes", {

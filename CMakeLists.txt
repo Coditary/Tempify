@@ -82,7 +82,9 @@ if(BUILD_TESTING)
         ${TEMPIFY_TEST_SOURCES}
     )
     target_include_directories(tempify_tests PRIVATE tests/support src/main/include)
+    target_compile_definitions(tempify_tests PRIVATE TEMPIFY_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
     target_link_libraries(tempify_tests PRIVATE tempify_core)
+    add_dependencies(tempify_tests tempify)
 
     if(TEMPIFY_TEST_SOURCES)
         set(TEMPIFY_DISCOVERED_TEST_NAMES)

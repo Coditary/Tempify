@@ -9,15 +9,15 @@
 TEST_CASE(CliParser_parses_q_refresh_prebyte_info_doctor_validate_inspect_lint_test_and_render_flags) {
     tempify::CliParser parser;
 
-    const tempify::CliRequest questions_alias = parser.parse({"m6_advanced", "-q", "--json", "--full"});
+    const tempify::CliRequest questions_alias = parser.parse({"advanced_hooks_layout", "-q", "--json", "--full"});
     REQUIRE(questions_alias.mode == tempify::CliMode::QuestionsShow);
-    REQUIRE_EQ(questions_alias.template_ref, std::string("m6_advanced"));
+    REQUIRE_EQ(questions_alias.template_ref, std::string("advanced_hooks_layout"));
     REQUIRE(questions_alias.questions_output_format == tempify::QuestionsOutputFormat::Json);
     REQUIRE(questions_alias.questions_full);
 
-    const tempify::CliRequest questions_long_alias = parser.parse({"m6_advanced", "--questions", "--json"});
+    const tempify::CliRequest questions_long_alias = parser.parse({"advanced_hooks_layout", "--questions", "--json"});
     REQUIRE(questions_long_alias.mode == tempify::CliMode::QuestionsShow);
-    REQUIRE_EQ(questions_long_alias.template_ref, std::string("m6_advanced"));
+    REQUIRE_EQ(questions_long_alias.template_ref, std::string("advanced_hooks_layout"));
     REQUIRE(questions_long_alias.questions_output_format == tempify::QuestionsOutputFormat::Json);
     REQUIRE(!questions_long_alias.questions_full);
 
@@ -68,21 +68,21 @@ TEST_CASE(CliParser_parses_q_refresh_prebyte_info_doctor_validate_inspect_lint_t
     REQUIRE(validate_json.mode == tempify::CliMode::TemplateValidate);
     REQUIRE(validate_json.validate_json);
 
-    const tempify::CliRequest inspect = parser.parse({"inspect", "m3_product"});
+    const tempify::CliRequest inspect = parser.parse({"inspect", "layered_cpp_product"});
     REQUIRE(inspect.mode == tempify::CliMode::TemplateInspect);
-    REQUIRE_EQ(inspect.template_ref, std::string("m3_product"));
+    REQUIRE_EQ(inspect.template_ref, std::string("layered_cpp_product"));
     REQUIRE(!inspect.inspect_json);
 
-    const tempify::CliRequest inspect_json = parser.parse({"inspect", "m3_product", "--json"});
+    const tempify::CliRequest inspect_json = parser.parse({"inspect", "layered_cpp_product", "--json"});
     REQUIRE(inspect_json.mode == tempify::CliMode::TemplateInspect);
     REQUIRE(inspect_json.inspect_json);
 
-    const tempify::CliRequest lint = parser.parse({"lint", "m3_product"});
+    const tempify::CliRequest lint = parser.parse({"lint", "layered_cpp_product"});
     REQUIRE(lint.mode == tempify::CliMode::TemplateLint);
-    REQUIRE_EQ(lint.template_ref, std::string("m3_product"));
+    REQUIRE_EQ(lint.template_ref, std::string("layered_cpp_product"));
     REQUIRE(!lint.lint_json);
 
-    const tempify::CliRequest lint_json = parser.parse({"lint", "m3_product", "--json"});
+    const tempify::CliRequest lint_json = parser.parse({"lint", "layered_cpp_product", "--json"});
     REQUIRE(lint_json.mode == tempify::CliMode::TemplateLint);
     REQUIRE(lint_json.lint_json);
 
@@ -310,9 +310,9 @@ TEST_CASE(CliParser_rejects_invalid_assignments_unknown_options_and_extra_target
     REQUIRE_THROWS_AS(parser.parse({"basic_cpp", "--wat"}), tempify::TempifyError);
     REQUIRE_THROWS_AS(parser.parse({"basic_cpp", "out-a", "out-b"}), tempify::TempifyError);
     REQUIRE_THROWS_AS(parser.parse({"registry", "bogus"}), tempify::TempifyError);
-    REQUIRE_THROWS_AS(parser.parse({"questions", "m6_advanced"}), tempify::TempifyError);
+    REQUIRE_THROWS_AS(parser.parse({"questions", "advanced_hooks_layout"}), tempify::TempifyError);
     REQUIRE_THROWS_AS(parser.parse({"template", "list"}), tempify::TempifyError);
-    REQUIRE_THROWS_AS(parser.parse({"schema", "m6_advanced"}), tempify::TempifyError);
+    REQUIRE_THROWS_AS(parser.parse({"schema", "advanced_hooks_layout"}), tempify::TempifyError);
     REQUIRE_THROWS_AS(parser.parse({"basic_cpp", "out-dir", "-q"}), tempify::TempifyError);
     REQUIRE_THROWS_AS(parser.parse({"basic_cpp", "out-dir", "--questions"}), tempify::TempifyError);
     REQUIRE_THROWS_AS(parser.parse({"basic_cpp", "out-dir", "-f", "-s"}), tempify::TempifyError);

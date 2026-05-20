@@ -1,4 +1,5 @@
 #include "TestHarness.h"
+#include "TempifyTestSupport.h"
 
 #include "tempify/lua/LuaEngine.h"
 #include "tempify/template/TemplateLoader.h"
@@ -78,11 +79,11 @@ void create_template(const std::filesystem::path& root,
 
 std::map<std::string, std::filesystem::path> test_index() {
     return {
-        {"m3_lang_base", std::filesystem::path{"templates/m3_lang_base"}},
-        {"m3_ci_layer", std::filesystem::path{"templates/m3_ci_layer"}},
-        {"m3_product", std::filesystem::path{"templates/m3_product"}},
-        {"m3_conflict_parent", std::filesystem::path{"templates/m3_conflict_parent"}},
-        {"m3_conflict_child", std::filesystem::path{"templates/m3_conflict_child"}},
+        {"layered_cpp_base", tempify::test_support::test_template_path("layered_cpp_base")},
+        {"layered_ci_overlay", tempify::test_support::test_template_path("layered_ci_overlay")},
+        {"layered_cpp_product", tempify::test_support::test_template_path("layered_cpp_product")},
+        {"conflict_parent_base", tempify::test_support::test_template_path("conflict_parent_base")},
+        {"conflict_child_error", tempify::test_support::test_template_path("conflict_child_error")},
     };
 }
 
@@ -92,9 +93,9 @@ TEST_CASE(TemplateLoader_merge_layers_replace_drop_and_append) {
     tempify::LuaEngine lua_engine;
     tempify::TemplateLoader loader(lua_engine);
 
-    const tempify::TemplateManifest manifest = loader.load(std::filesystem::path{"templates/m3_product"}, test_index());
+    const tempify::TemplateManifest manifest = loader.load(tempify::test_support::test_template_path("layered_cpp_product"), test_index());
 
-    REQUIRE_EQ(manifest.info.id, std::string("m3_product"));
+    REQUIRE_EQ(manifest.info.id, std::string("layered_cpp_product"));
     REQUIRE(manifest.files.size() >= static_cast<std::size_t>(3));
 
     bool has_readme = false;
@@ -104,7 +105,7 @@ TEST_CASE(TemplateLoader_merge_layers_replace_drop_and_append) {
     for (const auto& file : manifest.files) {
         if (file.relative_path == "README.md.pbt") {
             has_readme = true;
-            REQUIRE_EQ(file.source_template_id, std::string("m3_ci_layer"));
+            REQUIRE_EQ(file.source_template_id, std::string("layered_ci_overlay"));
         }
         if (file.relative_path == ".github/workflows/ci.yml.pbt") {
             has_ci = true;
@@ -113,7 +114,7 @@ TEST_CASE(TemplateLoader_merge_layers_replace_drop_and_append) {
             has_base_only = true;
         }
         if (file.relative_path == "src/main.cpp.pbt") {
-            main_from_product = file.source_template_id == "m3_product";
+            main_from_product = file.source_template_id == "layered_cpp_product";
         }
     }
 
@@ -128,7 +129,7 @@ TEST_CASE(TemplateLoader_file_conflict_error_strategy_throws) {
     tempify::TemplateLoader loader(lua_engine);
 
     REQUIRE_THROWS_AS(
-        loader.load(std::filesystem::path{"templates/m3_conflict_child"}, test_index()),
+        loader.load(tempify::test_support::test_template_path("conflict_child_error"), test_index()),
         tempify::TempifyError);
 }
 

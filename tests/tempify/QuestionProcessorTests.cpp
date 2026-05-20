@@ -1,4 +1,5 @@
 #include "TestHarness.h"
+#include "TempifyTestSupport.h"
 
 #include "tempify/frontend/IQuestionFrontend.h"
 #include "tempify/lua/LuaEngine.h"
@@ -61,7 +62,7 @@ private:
 
 tempify::TemplateManifest load_basic_cpp_manifest() {
     tempify::LuaEngine lua_engine;
-    return lua_engine.load_partial_manifest(std::filesystem::path{"templates/basic_cpp"});
+    return lua_engine.load_partial_manifest(tempify::test_support::test_template_path("basic_cpp"));
 }
 
 }

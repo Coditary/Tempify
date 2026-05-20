@@ -1,4 +1,5 @@
 #include "TestHarness.h"
+#include "TempifyTestSupport.h"
 
 #include "tempify/lua/LuaEngine.h"
 #include "tempify/prebyte/PrebyteRenderer.h"
@@ -50,9 +51,9 @@ void write_text_file(const std::filesystem::path& path, const std::string& text)
 
 TEST_CASE(LuaEngine_load_partial_manifest_loads_layout_scripts_env_and_hooks) {
     tempify::LuaEngine lua_engine;
-    const tempify::TemplateManifest manifest = lua_engine.load_partial_manifest(std::filesystem::path{"templates/m6_advanced"});
+    const tempify::TemplateManifest manifest = lua_engine.load_partial_manifest(tempify::test_support::test_template_path("advanced_hooks_layout"));
 
-    REQUIRE_EQ(manifest.info.id, std::string("m6_advanced"));
+    REQUIRE_EQ(manifest.info.id, std::string("advanced_hooks_layout"));
     REQUIRE_EQ(manifest.layout_rules.size(), static_cast<std::size_t>(3));
     REQUIRE_EQ(manifest.scripts.size(), static_cast<std::size_t>(1));
     REQUIRE_EQ(manifest.scripts[0].name, std::string("create_marker"));
@@ -67,8 +68,8 @@ TEST_CASE(LuaEngine_load_partial_manifest_loads_layout_scripts_env_and_hooks) {
 
 TEST_CASE(LuaEngine_load_template_info_and_ignores_pbc_artifacts) {
     tempify::LuaEngine lua_engine;
-    const tempify::TemplateInfo info = lua_engine.load_template_info(std::filesystem::path{"templates/basic_cpp"});
-    const tempify::TemplateManifest manifest = lua_engine.load_partial_manifest(std::filesystem::path{"templates/basic_cpp"});
+    const tempify::TemplateInfo info = lua_engine.load_template_info(tempify::test_support::test_template_path("basic_cpp"));
+    const tempify::TemplateManifest manifest = lua_engine.load_partial_manifest(tempify::test_support::test_template_path("basic_cpp"));
 
     REQUIRE_EQ(info.id, std::string("basic_cpp"));
     REQUIRE_EQ(info.name, std::string("Basic C++ App"));
@@ -83,7 +84,7 @@ TEST_CASE(LuaEngine_run_hook_supports_file_ops_process_string_process_file_and_s
     std::filesystem::create_directories(build_root.path());
 
     tempify::LuaEngine lua_engine;
-    const tempify::TemplateManifest manifest = lua_engine.load_partial_manifest(std::filesystem::path{"templates/m6_advanced"});
+    const tempify::TemplateManifest manifest = lua_engine.load_partial_manifest(tempify::test_support::test_template_path("advanced_hooks_layout"));
     const tempify::PrebyteRenderer renderer;
     const tempify::BuildContext context{
         .template_root = manifest.root,
@@ -119,7 +120,7 @@ TEST_CASE(LuaEngine_run_hook_unknown_script_throws) {
     std::filesystem::create_directories(build_root.path());
 
     tempify::LuaEngine lua_engine;
-    const tempify::TemplateManifest manifest = lua_engine.load_partial_manifest(std::filesystem::path{"templates/m6_advanced"});
+    const tempify::TemplateManifest manifest = lua_engine.load_partial_manifest(tempify::test_support::test_template_path("advanced_hooks_layout"));
     const tempify::PrebyteRenderer renderer;
     const tempify::BuildContext context{
         .template_root = manifest.root,
@@ -138,7 +139,7 @@ TEST_CASE(LuaEngine_run_hook_exec_respects_timeout) {
     std::filesystem::create_directories(build_root.path());
 
     tempify::LuaEngine lua_engine;
-    const tempify::TemplateManifest manifest = lua_engine.load_partial_manifest(std::filesystem::path{"templates/m6_advanced"});
+    const tempify::TemplateManifest manifest = lua_engine.load_partial_manifest(tempify::test_support::test_template_path("advanced_hooks_layout"));
     const tempify::PrebyteRenderer renderer;
     const tempify::BuildContext context{
         .template_root = manifest.root,

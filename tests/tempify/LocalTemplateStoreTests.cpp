@@ -1,70 +1,22 @@
-#include "TestHarness.h"
+#include "TempifyTestSupport.h"
 
 #include "tempify/config/TempifyConfig.h"
-#include "tempify/lua/LuaEngine.h"
-#include "tempify/hook/HookTrustStore.h"
 #include "tempify/store/LocalTemplateStore.h"
 #include "tempify/support/Errors.h"
+#include "tempify/lua/LuaEngine.h"
+#include "tempify/hook/HookTrustStore.h"
 #include "tempify/support/Paths.h"
 #include "tempify/template/TemplateLoader.h"
 
 #include <filesystem>
-#include <fstream>
-#include <sstream>
 #include <string>
-#include <utility>
 
 namespace {
-
-class ScopedDirectoryCleanup {
-public:
-    explicit ScopedDirectoryCleanup(std::filesystem::path path)
-        : path_(std::move(path)) {
-        std::filesystem::remove_all(path_);
-    }
-
-    ~ScopedDirectoryCleanup() {
-        std::filesystem::remove_all(path_);
-    }
-
-    const std::filesystem::path& path() const noexcept {
-        return path_;
-    }
-
-private:
-    std::filesystem::path path_;
-};
-
-void write_text_file(const std::filesystem::path& path, const std::string& text) {
-    std::filesystem::create_directories(path.parent_path());
-    std::ofstream output(path, std::ios::binary);
-    output << text;
-}
-
-std::string read_text_file(const std::filesystem::path& path) {
-    std::ifstream input(path, std::ios::binary);
-    std::ostringstream stream;
-    stream << input.rdbuf();
-    return stream.str();
-}
-
-void create_shared_template(const std::filesystem::path& shared_root,
-                            const std::string& template_id,
-                            const std::string& template_name,
-                            const std::string& version,
-                            const std::string& description) {
-    const std::filesystem::path template_root = shared_root / "templates" / template_id;
-    std::filesystem::create_directories(template_root / "files");
-    write_text_file(template_root / "template.lua",
-                    "return {\n"
-                    "  id = \"" + template_id + "\",\n"
-                    "  name = \"" + template_name + "\",\n"
-                    "  version = \"" + version + "\",\n"
-                    "  description = \"" + description + "\",\n"
-                    "  source_dir = \"files\"\n"
-                    "}\n");
-    write_text_file(template_root / "files" / "README.md.pbt", "# shared\n");
-}
+using tempify::test_support::ScopedDirectoryCleanup;
+using tempify::test_support::create_basic_template_at;
+using tempify::test_support::create_shared_template;
+using tempify::test_support::read_text_file;
+using tempify::test_support::write_text_file;
 
 }
 
@@ -132,6 +84,26 @@ TEST_CASE(LocalTemplateStore_refresh_writes_index_and_lists_shared_templates) {
     REQUIRE_EQ(entries[0].version, std::string("1.2.3"));
     REQUIRE_EQ(entries[0].path, std::filesystem::absolute(shared_root.path() / "templates" / "sample_tpl"));
     REQUIRE(read_text_file(store.index_file()).find("sample_tpl") != std::string::npos);
+}
+
+TEST_CASE(LocalTemplateStore_refresh_rejects_duplicate_shared_template_ids) {
+    ScopedDirectoryCleanup shared_root(std::filesystem::temp_directory_path() / "tempify-store-duplicate-refresh-test");
+    static_cast<void>(create_basic_template_at(shared_root.path() / "templates" / "alpha",
+                                               "duplicate_tpl",
+                                               "Alpha",
+                                               "1.0.0",
+                                               "Alpha entry"));
+    static_cast<void>(create_basic_template_at(shared_root.path() / "templates" / "beta",
+                                               "duplicate_tpl",
+                                               "Beta",
+                                               "1.0.0",
+                                               "Beta entry"));
+
+    tempify::LuaEngine lua_engine;
+    tempify::TemplateLoader loader(lua_engine);
+    tempify::LocalTemplateStore store(shared_root.path());
+
+    REQUIRE_THROWS_AS(store.refresh(loader), tempify::TempifyError);
 }
 
 TEST_CASE(TempifyConfig_load_and_merge_support_defaults_and_render_overlays) {
