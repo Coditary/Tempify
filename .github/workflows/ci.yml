@@ -63,24 +63,6 @@ jobs:
             binary_path: build/tempify
             reqpack_asset: rqp-v1.2.14-aarch64-darwin.tar.gz
             plugin_test: true
-          - name: windows-x86_64
-            runner: windows-2025
-            platform: windows
-            arch: x86_64
-            vcpkg_triplet: x64-windows-static
-            python_cmd: python
-            binary_path: build/Release/tempify.exe
-            cmake_arch: x64
-            plugin_test: false
-          - name: windows-aarch64
-            runner: windows-11-arm
-            platform: windows
-            arch: aarch64
-            vcpkg_triplet: arm64-windows-static
-            python_cmd: python
-            binary_path: build/Release/tempify.exe
-            cmake_arch: ARM64
-            plugin_test: false
 
     steps:
       - name: Checkout repository
@@ -108,16 +90,6 @@ jobs:
           echo "VCPKG_ROOT=$VCPKG_ROOT" >> "$GITHUB_ENV"
           "$VCPKG_ROOT/vcpkg" install "lua:${{ matrix.vcpkg_triplet }}" "cli11:${{ matrix.vcpkg_triplet }}"
 
-      - name: Bootstrap vcpkg (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $VcpkgRoot = Join-Path $env:RUNNER_TEMP 'vcpkg'
-          git clone --depth 1 https://github.com/microsoft/vcpkg.git $VcpkgRoot
-          & "$VcpkgRoot\bootstrap-vcpkg.bat" -disableMetrics
-          "VCPKG_ROOT=$VcpkgRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          & "$VcpkgRoot\vcpkg.exe" install "lua:${{ matrix.vcpkg_triplet }}" "cli11:${{ matrix.vcpkg_triplet }}"
-
       - name: Configure (Unix)
         if: runner.os != 'Windows'
         run: |
@@ -127,37 +99,17 @@ jobs:
             -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
             -DVCPKG_TARGET_TRIPLET="${{ matrix.vcpkg_triplet }}"
 
-      - name: Configure (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          cmake -S . -B build -G "Visual Studio 17 2022" -A "${{ matrix.cmake_arch }}" `
-            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" `
-            -DVCPKG_TARGET_TRIPLET="${{ matrix.vcpkg_triplet }}"
-
       - name: Build (Unix)
         if: runner.os != 'Windows'
         run: |
           set -euo pipefail
           cmake --build build --parallel
 
-      - name: Build (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          cmake --build build --config Release --parallel
-
       - name: Test (Unix)
         if: runner.os != 'Windows'
         run: |
           set -euo pipefail
           ctest --test-dir build --output-on-failure
-
-      - name: Test (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          ctest --test-dir build -C Release --output-on-failure
 
       - name: Download ReqPack runtime (Unix)
         if: runner.os != 'Windows' && matrix.plugin_test
@@ -221,17 +173,6 @@ jobs:
           HOME="$temp_home" XDG_DATA_HOME="$temp_home/.local/share" ./reqpack-runtime/root/rqp install ./dist/tempify-${GITHUB_REF_NAME#v}-${{ matrix.platform }}-${{ matrix.arch }}.rqp --non-interactive
           HOME="$temp_home" XDG_DATA_HOME="$temp_home/.local/share" "$temp_home/.local/bin/tempify" --help >/dev/null
           test -f "$temp_home/.local/share/reqpack/plugins/tempify/run.lua"
-
-      - name: Package release artifact (Windows)
-        if: startsWith(github.ref, 'refs/tags/v') && runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          & ${{ matrix.python_cmd }} scripts/ci/package_binary.py `
-            --version $env:GITHUB_REF_NAME `
-            --platform '${{ matrix.platform }}' `
-            --arch '${{ matrix.arch }}' `
-            --binary '${{ matrix.binary_path }}' `
-            --output-dir dist
 
       - name: Upload release artifact
         if: startsWith(github.ref, 'refs/tags/v')
