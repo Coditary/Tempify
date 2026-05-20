@@ -181,7 +181,6 @@ jobs:
           name: release-${{ matrix.platform }}-${{ matrix.arch }}
           path: |
             dist/*.tar.gz
-            dist/*.zip
             dist/*.rqp
           if-no-files-found: error
 
@@ -218,7 +217,7 @@ jobs:
             gh release create "$GITHUB_REF_NAME" --repo "$GH_REPO" --title "Tempify $VERSION" --notes "Automated release for Tempify $VERSION."
           fi
           gh release edit "$GITHUB_REF_NAME" --repo "$GH_REPO" --draft=false --latest --title "Tempify $VERSION" --notes "Automated release for Tempify $VERSION."
-          gh release upload "$GITHUB_REF_NAME" dist/*.tar.gz dist/*.zip dist/*.rqp dist/index.json --repo "$GH_REPO" --clobber
+          gh release upload "$GITHUB_REF_NAME" dist/*.tar.gz dist/*.rqp dist/index.json --repo "$GH_REPO" --clobber
 
   docker:
     if: startsWith(github.ref, 'refs/tags/v')
