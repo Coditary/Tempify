@@ -29,6 +29,7 @@
 #include "tempify/template/TemplateValidator.h"
 
 #include <filesystem>
+#include <cstdio>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -45,9 +46,21 @@
 #include <cctype>
 #include <optional>
 
+#if defined(_WIN32)
+#include <io.h>
+#else
 #include <unistd.h>
+#endif
 
 namespace {
+
+bool stdin_is_tty() {
+#if defined(_WIN32)
+    return _isatty(_fileno(stdin)) != 0;
+#else
+    return ::isatty(STDIN_FILENO) == 1;
+#endif
+}
 
 std::string json_escape(const std::string& value) {
     std::string escaped;
@@ -124,7 +137,7 @@ bool hooks_disabled_for(const tempify::CliRequest& request,
             }
             return false;
         }();
-        if (!force_prompt && ::isatty(STDIN_FILENO) != 1) {
+        if (!force_prompt && !stdin_is_tty()) {
             return false;
         }
 

@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstdint>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -137,14 +138,26 @@ struct FixtureFailure {
 };
 
 std::filesystem::path create_temp_directory(const std::string& prefix) {
-    std::string pattern = (std::filesystem::temp_directory_path() / (prefix + "-XXXXXX")).string();
-    std::vector<char> buffer(pattern.begin(), pattern.end());
-    buffer.push_back('\0');
-    char* created = ::mkdtemp(buffer.data());
-    if (created == nullptr) {
-        throw TempifyError("Could not create temp directory for fixture '" + prefix + "'.");
+    std::error_code error;
+    const std::filesystem::path temp_root = std::filesystem::temp_directory_path(error);
+    if (error) {
+        throw TempifyError("Could not resolve temp directory for fixture '" + prefix + "': " + error.message());
     }
-    return std::filesystem::path(created);
+
+    const std::uint64_t seed = static_cast<std::uint64_t>(
+        std::chrono::steady_clock::now().time_since_epoch().count());
+    for (std::uint64_t attempt = 0; attempt < 128; ++attempt) {
+        const std::filesystem::path candidate = temp_root / (prefix + "-" + std::to_string(seed + attempt));
+        error.clear();
+        if (std::filesystem::create_directory(candidate, error)) {
+            return candidate;
+        }
+        if (error && error != std::errc::file_exists) {
+            throw TempifyError("Could not create temp directory for fixture '" + prefix + "': " + error.message());
+        }
+    }
+
+    throw TempifyError("Could not create temp directory for fixture '" + prefix + "'.");
 }
 
 std::vector<FixtureDefinition> discover_fixtures(const TemplateManifest& manifest,
