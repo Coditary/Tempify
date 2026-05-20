@@ -148,14 +148,23 @@ TEST_CASE(LuaEngine_run_hook_exec_respects_timeout) {
     };
 
     const std::filesystem::path hook_path = build_root.path() / "hook.lua";
-    write_text_file(hook_path, "exec('sleep 1')\n");
+    write_text_file(hook_path,
+#ifdef _WIN32
+                    "exec('ping -n 2 127.0.0.1 > nul')\n");
+#else
+                    "exec('sleep 1')\n");
+#endif
 
     try {
         lua_engine.run_hook(hook_path, manifest, context, renderer, std::chrono::milliseconds(25));
         REQUIRE(false);
     } catch (const tempify::TempifyError& error) {
         REQUIRE(std::string(error.what()).find("timed out after 25 ms") != std::string::npos);
+#ifdef _WIN32
+        REQUIRE(std::string(error.what()).find("running command: ping -n 2 127.0.0.1 > nul") != std::string::npos);
+#else
         REQUIRE(std::string(error.what()).find("running command: sleep 1") != std::string::npos);
+#endif
     }
 }
 

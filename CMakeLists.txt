@@ -80,7 +80,8 @@ install(FILES README.md LICENSE DESTINATION ${CMAKE_INSTALL_DATADIR}/tempify)
 
 if(BUILD_TESTING)
     file(GLOB TEMPIFY_TEST_SOURCES CONFIGURE_DEPENDS tests/tempify/*.cpp)
-    set(TEMPIFY_TEST_ENVIRONMENT "TEMPIFY_TEST_BINARY=$<TARGET_FILE:tempify>")
+    set(TEMPIFY_TEST_ENVIRONMENT
+        "TEMPIFY_TEST_BINARY=$<TARGET_FILE:tempify>;XDG_DATA_HOME=${CMAKE_SOURCE_DIR}/tests/test_workspace/.xdg-data;XDG_CONFIG_HOME=${CMAKE_SOURCE_DIR}/tests/test_workspace/.xdg-config")
 
     add_executable(tempify_tests
         tests/support/TestHarness.cpp

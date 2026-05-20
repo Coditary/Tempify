@@ -116,7 +116,8 @@ int hook_mkdir(lua_State* state) {
     const HookHost& host = *hook_host(state);
     const std::filesystem::path path = resolve_output_path(host, luaL_checkstring(state, 1));
     std::filesystem::create_directories(path);
-    lua_pushlstring(state, path.string().c_str(), path.string().size());
+    const std::string path_text = path.string();
+    lua_pushlstring(state, path_text.c_str(), path_text.size());
     return 1;
 }
 
@@ -132,7 +133,8 @@ int hook_read_file(lua_State* state) {
     const std::filesystem::path path = resolve_input_path(host, luaL_checkstring(state, 1));
     std::ifstream input(path, std::ios::binary);
     if (!input) {
-        return luaL_error(state, "Could not read file: %s", path.string().c_str());
+        const std::string path_text = path.string();
+        return luaL_error(state, "Could not read file: %s", path_text.c_str());
     }
     std::ostringstream stream;
     stream << input.rdbuf();
@@ -148,10 +150,12 @@ int hook_write_file(lua_State* state) {
     std::filesystem::create_directories(path.parent_path());
     std::ofstream output(path, std::ios::binary);
     if (!output) {
-        return luaL_error(state, "Could not write file: %s", path.string().c_str());
+        const std::string path_text = path.string();
+        return luaL_error(state, "Could not write file: %s", path_text.c_str());
     }
     output << content;
-    lua_pushlstring(state, path.string().c_str(), path.string().size());
+    const std::string path_text = path.string();
+    lua_pushlstring(state, path_text.c_str(), path_text.size());
     return 1;
 }
 
@@ -205,7 +209,8 @@ int hook_copy(lua_State* state) {
         std::filesystem::copy_file(source, target, std::filesystem::copy_options::overwrite_existing);
     }
 
-    lua_pushlstring(state, target.string().c_str(), target.string().size());
+    const std::string target_text = target.string();
+    lua_pushlstring(state, target_text.c_str(), target_text.size());
     return 1;
 }
 
@@ -243,7 +248,8 @@ int hook_process_file(lua_State* state) {
     prebyte::Prebyte engine;
     host.renderer->configure(engine, values, *host.manifest);
     host.renderer->render_file(engine, input, output);
-    lua_pushlstring(state, output.string().c_str(), output.string().size());
+    const std::string output_text = output.string();
+    lua_pushlstring(state, output_text.c_str(), output_text.size());
     return 1;
 }
 

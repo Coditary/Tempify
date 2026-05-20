@@ -266,10 +266,12 @@ void push_context_table(lua_State* state,
     push_string_map(state, values);
     lua_setfield(state, -2, "values");
 
-    lua_pushlstring(state, template_root.string().c_str(), template_root.string().size());
+    const std::string template_root_text = template_root.string();
+    lua_pushlstring(state, template_root_text.c_str(), template_root_text.size());
     lua_setfield(state, -2, "template_root");
 
-    lua_pushlstring(state, build_root.string().c_str(), build_root.string().size());
+    const std::string build_root_text = build_root.string();
+    lua_pushlstring(state, build_root_text.c_str(), build_root_text.size());
     lua_setfield(state, -2, "build_root");
 
     if (candidate_value.has_value()) {

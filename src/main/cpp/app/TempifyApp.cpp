@@ -451,12 +451,16 @@ std::string format_template_info_json(const tempify::TemplateManifest& manifest)
 }
 
 std::size_t count_direct_template_dirs(const std::optional<std::filesystem::path>& workspace_templates_root) {
-    if (!workspace_templates_root.has_value() || !std::filesystem::is_directory(*workspace_templates_root)) {
+    std::error_code error;
+    if (!workspace_templates_root.has_value() || !std::filesystem::is_directory(*workspace_templates_root, error)) {
         return 0;
     }
 
     std::size_t count = 0;
-    for (const auto& entry : std::filesystem::directory_iterator(*workspace_templates_root)) {
+    for (const auto& entry : std::filesystem::directory_iterator(*workspace_templates_root, error)) {
+        if (error) {
+            break;
+        }
         if (entry.is_directory()) {
             ++count;
         }

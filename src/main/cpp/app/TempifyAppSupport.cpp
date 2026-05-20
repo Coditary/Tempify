@@ -19,11 +19,15 @@ namespace {
 
 std::vector<std::filesystem::path> scan_template_roots(const std::filesystem::path& templates_root) {
     std::vector<std::filesystem::path> roots;
-    if (!std::filesystem::is_directory(templates_root)) {
+    std::error_code error;
+    if (!std::filesystem::is_directory(templates_root, error)) {
         return roots;
     }
 
-    for (const auto& entry : std::filesystem::directory_iterator(templates_root)) {
+    for (const auto& entry : std::filesystem::directory_iterator(templates_root, error)) {
+        if (error) {
+            break;
+        }
         if (entry.is_directory()) {
             roots.push_back(entry.path());
         }
@@ -62,7 +66,8 @@ TemplateCatalog build_catalog(const std::optional<std::filesystem::path>& worksp
             throw TempifyError("Duplicate shared template id found in index: " + entry.id);
         }
 
-        if (!std::filesystem::is_directory(entry.path) || !std::filesystem::is_regular_file(entry.path / "template.lua")) {
+        std::error_code error;
+        if (!std::filesystem::is_directory(entry.path, error) || !std::filesystem::is_regular_file(entry.path / "template.lua", error)) {
             continue;
         }
 
@@ -88,7 +93,8 @@ std::filesystem::path resolve_template_root(const CliRequest& request,
                                             const TemplateCatalog& catalog,
                                             const LocalTemplateStore& store) {
     const std::filesystem::path candidate = request.template_ref;
-    if (std::filesystem::is_directory(candidate) && std::filesystem::is_regular_file(candidate / "template.lua")) {
+    std::error_code error;
+    if (std::filesystem::is_directory(candidate, error) && std::filesystem::is_regular_file(candidate / "template.lua", error)) {
         return std::filesystem::absolute(candidate);
     }
 
@@ -98,7 +104,9 @@ std::filesystem::path resolve_template_root(const CliRequest& request,
     }
 
     if (const auto shared = store.find_template(request.template_ref)) {
-        if (std::filesystem::is_directory(shared->path) && std::filesystem::is_regular_file(shared->path / "template.lua")) {
+        std::error_code shared_error;
+        if (std::filesystem::is_directory(shared->path, shared_error)
+            && std::filesystem::is_regular_file(shared->path / "template.lua", shared_error)) {
             return std::filesystem::absolute(shared->path);
         }
         throw TempifyError("Shared template '" + request.template_ref + "' is missing on disk. Run `tempify refresh`.");
