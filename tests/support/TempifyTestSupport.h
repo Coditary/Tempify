@@ -146,6 +146,26 @@ inline void write_text_file(const std::filesystem::path& path, const std::string
     output << text;
 }
 
+inline std::string json_escape(std::string_view value) {
+    std::string escaped;
+    escaped.reserve(value.size());
+    for (const char ch : value) {
+        switch (ch) {
+        case '\\': escaped += "\\\\"; break;
+        case '"': escaped += "\\\""; break;
+        case '\n': escaped += "\\n"; break;
+        case '\r': escaped += "\\r"; break;
+        case '\t': escaped += "\\t"; break;
+        default: escaped.push_back(ch); break;
+        }
+    }
+    return escaped;
+}
+
+inline std::string json_escaped_path(const std::filesystem::path& path) {
+    return json_escape(path.string());
+}
+
 inline std::filesystem::path tempify_binary_path() {
     if (const char* binary = std::getenv("TEMPIFY_TEST_BINARY"); binary != nullptr && binary[0] != '\0') {
         return binary;

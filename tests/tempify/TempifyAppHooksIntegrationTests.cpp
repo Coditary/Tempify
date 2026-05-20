@@ -10,6 +10,7 @@ using tempify::test_support::ScopedStdinCapture;
 using tempify::test_support::ScopedStdoutCapture;
 using tempify::test_support::ScopedTempifyDataHome;
 using tempify::test_support::create_slow_hook_template;
+using tempify::test_support::json_escaped_path;
 using tempify::test_support::read_text_file;
 using tempify::test_support::test_template_path;
 
@@ -89,7 +90,7 @@ TEST_CASE(TempifyApp_accept_hooks_ask_tty_shows_summary_and_persists_trust) {
 
     const std::filesystem::path trust_store = data_home.shared_root() / "trust" / "hooks.json";
     REQUIRE(std::filesystem::is_regular_file(trust_store));
-    REQUIRE(read_text_file(trust_store).find(std::filesystem::weakly_canonical(test_template_path("advanced_hooks_layout")).string()) != std::string::npos);
+    REQUIRE(read_text_file(trust_store).find(json_escaped_path(std::filesystem::weakly_canonical(test_template_path("advanced_hooks_layout")))) != std::string::npos);
 
     {
         ScopedDirectoryCleanup second_target(std::filesystem::temp_directory_path() / "tempify-app-hook-trust-target-2");

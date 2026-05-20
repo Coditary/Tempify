@@ -4,8 +4,48 @@
 #include <cstdlib>
 #include <filesystem>
 #include <string>
+#include <vector>
 
 namespace {
+
+std::string shell_quote(std::string value) {
+    std::string quoted = "\"";
+    for (const char ch : value) {
+        if (ch == '"') {
+            quoted += "\\\"";
+            continue;
+        }
+        quoted.push_back(ch);
+    }
+    quoted.push_back('"');
+    return quoted;
+}
+
+const char* shell_null_device() {
+#ifdef _WIN32
+    return "NUL";
+#else
+    return "/dev/null";
+#endif
+}
+
+int run_tempify_and_capture_stderr(const std::vector<std::string>& args,
+                                   const std::filesystem::path& stderr_file) {
+    std::string command = shell_quote(tempify::test_support::tempify_binary_path().string());
+    for (const auto& arg : args) {
+        command.push_back(' ');
+        if (arg.find_first_of(" \t\"") == std::string::npos) {
+            command += arg;
+        } else {
+            command += shell_quote(arg);
+        }
+    }
+    command += " > ";
+    command += shell_null_device();
+    command += " 2> ";
+    command += shell_quote(stderr_file.string());
+    return std::system(command.c_str());
+}
 
 using tempify::test_support::ScopedDirectoryCleanup;
 using tempify::test_support::ScopedStdoutCapture;
@@ -379,17 +419,19 @@ TEST_CASE(Tempify_json_error_wraps_reapply_block_and_includes_blocked_paths) {
 
     write_text_file(target.path() / "README.md", "# local conflict\n");
 
-    const std::filesystem::path binary = tempify_binary_path();
     const std::filesystem::path stderr_file = std::filesystem::temp_directory_path() / "tempify-app-reapply-json-error-stderr.txt";
     std::filesystem::remove(stderr_file);
-    const int exit_code = std::system((std::string{"\""} + binary.string()
-                                       + "\" basic_cpp \"" + target.path().string()
-                                       + "\" --set project_name=JsonConflictApp"
-                                       + " --set name_slug=json-conflict-app"
-                                       + " --set namespace=json_conflict_ns"
-                                       + " --set include_ci=false"
-                                       + " --set author=NewAuthor"
-                                       + " --reapply --json > /dev/null 2> \"" + stderr_file.string() + "\"").c_str());
+    const int exit_code = run_tempify_and_capture_stderr({
+        "basic_cpp",
+        target.path().string(),
+        "--set", "project_name=JsonConflictApp",
+        "--set", "name_slug=json-conflict-app",
+        "--set", "namespace=json_conflict_ns",
+        "--set", "include_ci=false",
+        "--set", "author=NewAuthor",
+        "--reapply",
+        "--json",
+    }, stderr_file);
 
     REQUIRE(exit_code != 0);
     const std::string error_output = read_text_file(stderr_file);
@@ -484,17 +526,19 @@ TEST_CASE(Tempify_json_error_wraps_origin_template_mismatch_with_structured_bloc
         "--set", "ci_provider=github",
     }), 0);
 
-    const std::filesystem::path binary = tempify_binary_path();
     const std::filesystem::path stderr_file = std::filesystem::temp_directory_path() / "tempify-app-reapply-origin-mismatch-json-stderr.txt";
     std::filesystem::remove(stderr_file);
-    const int exit_code = std::system((std::string{"\""} + binary.string()
-                                       + "\" basic_cpp \"" + target.path().string()
-                                       + "\" --set project_name=OriginJsonApp"
-                                       + " --set name_slug=origin-json-app"
-                                       + " --set namespace=origin_json_ns"
-                                       + " --set include_ci=false"
-                                       + " --set author=OriginJsonTester"
-                                       + " --reapply --json > /dev/null 2> \"" + stderr_file.string() + "\"").c_str());
+    const int exit_code = run_tempify_and_capture_stderr({
+        "basic_cpp",
+        target.path().string(),
+        "--set", "project_name=OriginJsonApp",
+        "--set", "name_slug=origin-json-app",
+        "--set", "namespace=origin_json_ns",
+        "--set", "include_ci=false",
+        "--set", "author=OriginJsonTester",
+        "--reapply",
+        "--json",
+    }, stderr_file);
 
     REQUIRE(exit_code != 0);
     const std::string error_output = read_text_file(stderr_file);
@@ -530,17 +574,19 @@ TEST_CASE(Tempify_json_error_wraps_pre_1_0_minor_upgrade_with_structured_blocked
     lock_text.replace(version_pos, current_version.size(), "\"version\": \"0.0.9\"");
     write_text_file(target.path() / ".tempify-lock.json", lock_text);
 
-    const std::filesystem::path binary = tempify_binary_path();
     const std::filesystem::path stderr_file = std::filesystem::temp_directory_path() / "tempify-app-reapply-pre-1-0-json-stderr.txt";
     std::filesystem::remove(stderr_file);
-    const int exit_code = std::system((std::string{"\""} + binary.string()
-                                       + "\" basic_cpp \"" + target.path().string()
-                                       + "\" --set project_name=Pre1JsonApp"
-                                       + " --set name_slug=pre1-json-app"
-                                       + " --set namespace=pre1_json_ns"
-                                       + " --set include_ci=false"
-                                       + " --set author=UpgradeTester"
-                                       + " --reapply --json > /dev/null 2> \"" + stderr_file.string() + "\"").c_str());
+    const int exit_code = run_tempify_and_capture_stderr({
+        "basic_cpp",
+        target.path().string(),
+        "--set", "project_name=Pre1JsonApp",
+        "--set", "name_slug=pre1-json-app",
+        "--set", "namespace=pre1_json_ns",
+        "--set", "include_ci=false",
+        "--set", "author=UpgradeTester",
+        "--reapply",
+        "--json",
+    }, stderr_file);
 
     REQUIRE(exit_code != 0);
     const std::string error_output = read_text_file(stderr_file);
@@ -569,17 +615,19 @@ TEST_CASE(Tempify_json_error_wraps_reapply_subcommand_block_with_structured_deta
 
     write_text_file(target.path() / "README.md", "# local conflict\n");
 
-    const std::filesystem::path binary = tempify_binary_path();
     const std::filesystem::path stderr_file = std::filesystem::temp_directory_path() / "tempify-app-reapply-subcommand-json-error-stderr.txt";
     std::filesystem::remove(stderr_file);
-    const int exit_code = std::system((std::string{"\""} + binary.string()
-                                       + "\" reapply basic_cpp \"" + target.path().string()
-                                       + "\" --set project_name=JsonSubcommandConflictApp"
-                                       + " --set name_slug=json-subcommand-conflict-app"
-                                       + " --set namespace=json_subcommand_conflict_ns"
-                                       + " --set include_ci=false"
-                                       + " --set author=NewAuthor"
-                                       + " --json > /dev/null 2> \"" + stderr_file.string() + "\"").c_str());
+    const int exit_code = run_tempify_and_capture_stderr({
+        "reapply",
+        "basic_cpp",
+        target.path().string(),
+        "--set", "project_name=JsonSubcommandConflictApp",
+        "--set", "name_slug=json-subcommand-conflict-app",
+        "--set", "namespace=json_subcommand_conflict_ns",
+        "--set", "include_ci=false",
+        "--set", "author=NewAuthor",
+        "--json",
+    }, stderr_file);
 
     REQUIRE(exit_code != 0);
     const std::string error_output = read_text_file(stderr_file);

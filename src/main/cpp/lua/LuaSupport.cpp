@@ -227,7 +227,8 @@ void register_metadata_helpers(lua_State* state) {
 }
 
 void load_file_result(lua_State* state, const std::filesystem::path& path) {
-    if (luaL_loadfile(state, path.string().c_str()) != LUA_OK) {
+    const std::string path_text = path.string();
+    if (luaL_loadfile(state, path_text.c_str()) != LUA_OK) {
         const std::string message = lua_tostring(state, -1);
         throw_lua_error(path, message);
     }

@@ -13,6 +13,16 @@ namespace tempify {
 
 namespace {
 
+enum class SearchCeilingMode {
+    Inclusive,
+    Exclusive,
+};
+
+struct SearchCeiling {
+    std::filesystem::path path;
+    SearchCeilingMode mode = SearchCeilingMode::Inclusive;
+};
+
 std::optional<std::filesystem::path> environment_path(const char* name) {
     if (const char* value = std::getenv(name)) {
         if (*value != '\0') {
@@ -81,19 +91,36 @@ bool path_starts_with(const std::filesystem::path& path, const std::filesystem::
     return true;
 }
 
-std::optional<std::filesystem::path> search_ceiling(const std::filesystem::path& start) {
+bool reached_exclusive_ceiling(const std::filesystem::path& current,
+                               const std::optional<SearchCeiling>& ceiling) {
+    return ceiling.has_value()
+        && ceiling->mode == SearchCeilingMode::Exclusive
+        && current == ceiling->path;
+}
+
+bool reached_inclusive_ceiling(const std::filesystem::path& current,
+                               const std::optional<SearchCeiling>& ceiling) {
+    return ceiling.has_value()
+        && ceiling->mode == SearchCeilingMode::Inclusive
+        && current == ceiling->path;
+}
+
+std::optional<SearchCeiling> search_ceiling(const std::filesystem::path& start) {
     const std::filesystem::path absolute_start = absolute_path(start);
 
     std::error_code error;
     const std::filesystem::path temp_root = std::filesystem::temp_directory_path(error);
-    if (!error && path_starts_with(absolute_start, absolute_path(temp_root))) {
-        return absolute_path(temp_root);
+    const std::filesystem::path absolute_temp_root = absolute_path(temp_root);
+    if (!error
+        && absolute_start != absolute_temp_root
+        && path_starts_with(absolute_start, absolute_temp_root)) {
+        return SearchCeiling{absolute_temp_root, SearchCeilingMode::Exclusive};
     }
 
     std::filesystem::path current = absolute_start;
     while (true) {
         if (exists_noexcept(current / ".git")) {
-            return current;
+            return SearchCeiling{current, SearchCeilingMode::Inclusive};
         }
         if (current == current.root_path() || current == current.parent_path()) {
             break;
@@ -108,14 +135,20 @@ std::optional<std::filesystem::path> search_ceiling(const std::filesystem::path&
 
 std::optional<std::filesystem::path> find_workspace_templates_root(const std::filesystem::path& start) {
     std::filesystem::path current = absolute_path(start);
-    const std::optional<std::filesystem::path> ceiling = search_ceiling(current);
+    const std::optional<SearchCeiling> ceiling = search_ceiling(current);
 
     while (true) {
+        if (reached_exclusive_ceiling(current, ceiling)) {
+            return std::nullopt;
+        }
+
         if (is_directory_noexcept(current / "templates")) {
             return current / "templates";
         }
 
-        if ((ceiling.has_value() && current == *ceiling) || current == current.root_path() || current == current.parent_path()) {
+        if (reached_inclusive_ceiling(current, ceiling)
+            || current == current.root_path()
+            || current == current.parent_path()) {
             return std::nullopt;
         }
 
@@ -125,15 +158,21 @@ std::optional<std::filesystem::path> find_workspace_templates_root(const std::fi
 
 std::optional<std::filesystem::path> find_workspace_config_file(const std::filesystem::path& start) {
     std::filesystem::path current = absolute_path(start);
-    const std::optional<std::filesystem::path> ceiling = search_ceiling(current);
+    const std::optional<SearchCeiling> ceiling = search_ceiling(current);
 
     while (true) {
+        if (reached_exclusive_ceiling(current, ceiling)) {
+            return std::nullopt;
+        }
+
         const std::filesystem::path candidate = current / ".tempify" / "config.json";
         if (is_regular_file_noexcept(candidate)) {
             return candidate;
         }
 
-        if ((ceiling.has_value() && current == *ceiling) || current == current.root_path() || current == current.parent_path()) {
+        if (reached_inclusive_ceiling(current, ceiling)
+            || current == current.root_path()
+            || current == current.parent_path()) {
             return std::nullopt;
         }
 

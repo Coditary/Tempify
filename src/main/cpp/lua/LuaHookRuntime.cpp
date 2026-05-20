@@ -8,10 +8,13 @@
 #include <chrono>
 #include <cstdlib>
 #include <fstream>
+#include <limits>
 #include <sstream>
 #include <thread>
 
-#if !defined(_WIN32)
+#if defined(_WIN32)
+#include <windows.h>
+#else
 #include <csignal>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -295,7 +298,65 @@ int hook_exec(lua_State* state) {
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 #else
-    lua_pushinteger(state, std::system(command));
+    const std::string shell = [] {
+        if (const char* comspec = std::getenv("ComSpec"); comspec != nullptr && comspec[0] != '\0') {
+            return std::string(comspec);
+        }
+        return std::string("cmd.exe");
+    }();
+    std::string command_line = '"' + shell + "\" /d /c " + command;
+
+    STARTUPINFOA startup_info{};
+    startup_info.cb = sizeof(startup_info);
+    PROCESS_INFORMATION process_info{};
+    if (!CreateProcessA(shell.c_str(),
+                        command_line.data(),
+                        nullptr,
+                        nullptr,
+                        FALSE,
+                        CREATE_NEW_PROCESS_GROUP,
+                        nullptr,
+                        nullptr,
+                        &startup_info,
+                        &process_info)) {
+        return luaL_error(state, "Could not start process: %s", command);
+    }
+
+    CloseHandle(process_info.hThread);
+
+    DWORD wait_ms = INFINITE;
+    if (const auto timeout = remaining_timeout(host)) {
+        const auto timeout_count = timeout->count();
+        if (timeout_count <= 0) {
+            wait_ms = 0;
+        } else if (timeout_count >= static_cast<long long>(std::numeric_limits<DWORD>::max() - 1)) {
+            wait_ms = std::numeric_limits<DWORD>::max() - 1;
+        } else {
+            wait_ms = static_cast<DWORD>(timeout_count);
+        }
+    }
+
+    const DWORD wait_result = WaitForSingleObject(process_info.hProcess, wait_ms);
+    if (wait_result == WAIT_TIMEOUT) {
+        TerminateProcess(process_info.hProcess, 1);
+        WaitForSingleObject(process_info.hProcess, INFINITE);
+        CloseHandle(process_info.hProcess);
+        return luaL_error(state, "Hook timed out after %d ms while running command: %s", timeout_message_ms(host), command);
+    }
+
+    if (wait_result != WAIT_OBJECT_0) {
+        CloseHandle(process_info.hProcess);
+        return luaL_error(state, "Could not wait for process: %s", command);
+    }
+
+    DWORD exit_code = 0;
+    if (!GetExitCodeProcess(process_info.hProcess, &exit_code)) {
+        CloseHandle(process_info.hProcess);
+        return luaL_error(state, "Could not wait for process: %s", command);
+    }
+
+    CloseHandle(process_info.hProcess);
+    lua_pushinteger(state, static_cast<lua_Integer>(exit_code));
     return 1;
 #endif
 }
@@ -376,7 +437,8 @@ void LuaEngine::run_hook(const std::filesystem::path& script_path,
         lua_sethook(state.get(), hook_timeout_guard, LUA_MASKCOUNT, 1000);
     }
 
-    if (luaL_loadfile(state.get(), script_path.string().c_str()) != LUA_OK) {
+    const std::string script_path_text = script_path.string();
+    if (luaL_loadfile(state.get(), script_path_text.c_str()) != LUA_OK) {
         const std::string message = lua_tostring(state.get(), -1);
         lua_internal::throw_lua_error(script_path, message);
     }
