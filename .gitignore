@@ -1,4 +1,4 @@
-build/
+/build/
 /build-fetch/
 /build-root-plugin/
 /build-installcheck/
