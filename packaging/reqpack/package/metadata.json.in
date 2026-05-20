@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "name": "tempify",
+  "name": "tempify-cli",
   "version": @VERSION@,
   "release": 1,
   "revision": 0,

@@ -726,6 +726,15 @@ local function state_paths(data_root)
     }
 end
 
+local function default_data_root_without_context()
+    local success, output = run_shell("printf '%s' \"${XDG_DATA_HOME:-$HOME/.local/share}\"")
+    local root = success and trim(output) or ""
+    if root == "" then
+        return nil
+    end
+    return join_path(root, "tempify")
+end
+
 local function template_target_path(paths, id)
     return join_path(paths.templatesRoot, id)
 end
@@ -843,6 +852,39 @@ local function installed_record_map(records)
     return result
 end
 
+local function requested_package_name(pkg)
+    if type(pkg) ~= "table" then
+        return ""
+    end
+    return trim(pkg.name or pkg.packageId)
+end
+
+local function package_is_missing(installed_map, pkg)
+    local name = requested_package_name(pkg)
+    if name == "" then
+        return true
+    end
+
+    local installed = installed_map[name]
+    if installed == nil then
+        return true
+    end
+
+    local requested_version = trim(type(pkg) == "table" and pkg.version or "")
+    return requested_version ~= "" and requested_version ~= installed.version
+end
+
+local function filter_missing_packages(installed_records, packages)
+    local installed_map = installed_record_map(installed_records)
+    local missing = {}
+    for _, pkg in ipairs(packages or {}) do
+        if package_is_missing(installed_map, pkg) then
+            table.insert(missing, pkg)
+        end
+    end
+    return missing
+end
+
 local function upsert_record(records, record)
     local updated = {}
     local replaced = false
@@ -937,9 +979,38 @@ local function resolve_data_root(context, options)
     return join_path(root, "tempify")
 end
 
-local function effective_repositories(context, options)
+local function load_builtin_repositories(context)
+    local manifest_path = join_path(context.plugin.dir, "default-template-repositories.json")
+    local root, read_error = read_json_file(manifest_path)
+    if root == nil then
+        if read_error ~= nil then
+            log_warn(context, "skip built-in tempify repositories: " .. tostring(read_error))
+        end
+        return {}
+    end
+    if type(root) ~= "table" or type(root.repositories) ~= "table" then
+        log_warn(context, "skip built-in tempify repositories: invalid manifest")
+        return {}
+    end
+
     local repositories = {}
+    for _, repo in ipairs(root.repositories) do
+        local url = resolve_local_path(context.plugin.dir, trim(type(repo) == "table" and repo.url or ""))
+        if url ~= "" and (type(repo) ~= "table" or repo.enabled ~= false) then
+            table.insert(repositories, {
+                id = trim(type(repo) == "table" and repo.id or ""),
+                url = url,
+                priority = tonumber(type(repo) == "table" and repo.priority) or 0,
+                enabled = true,
+            })
+        end
+    end
+    return repositories
+end
+
+local function effective_repositories(context, options)
     if #options.repositories > 0 then
+        local repositories = {}
         for _, repo in ipairs(options.repositories) do
             table.insert(repositories, {
                 id = trim(repo.id),
@@ -951,6 +1022,7 @@ local function effective_repositories(context, options)
         return repositories
     end
 
+    local repositories = load_builtin_repositories(context)
     for _, repo in ipairs(context ~= nil and context.repositories or {}) do
         if repo.enabled ~= false then
             table.insert(repositories, {
@@ -1287,7 +1359,11 @@ function plugin.getSecurityMetadata()
 end
 
 function plugin.getMissingPackages(packages)
-    return packages or {}
+    local data_root = default_data_root_without_context()
+    if data_root == nil then
+        return packages or {}
+    end
+    return filter_missing_packages(load_installed_records(state_paths(data_root)), packages or {})
 end
 
 function plugin.install(context, packages)
@@ -1306,8 +1382,14 @@ function plugin.install(context, packages)
     end
 
     local records = load_installed_records(runtime.paths)
+    local requested = filter_missing_packages(records, packages or {})
+    if #requested == 0 then
+        tx_success(context)
+        return true
+    end
+
     local installed = {}
-    for _, pkg in ipairs(packages or {}) do
+    for _, pkg in ipairs(requested) do
         local record = find_catalog_record(catalog, trim(pkg.name))
         if record == nil then
             emit_event(context, "unavailable", trim(pkg.name))

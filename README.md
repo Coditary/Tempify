@@ -47,10 +47,10 @@ Namensschema:
 - `tempify-<version>-macos-aarch64.tar.gz`
 - `tempify-<version>-windows-x86_64.zip`
 - `tempify-<version>-windows-aarch64.zip`
-- `tempify-<version>-linux-x86_64.rqp`
-- `tempify-<version>-linux-aarch64.rqp`
-- `tempify-<version>-macos-x86_64.rqp`
-- `tempify-<version>-macos-aarch64.rqp`
+- `tempify-cli-<version>-linux-x86_64.rqp`
+- `tempify-cli-<version>-linux-aarch64.rqp`
+- `tempify-cli-<version>-macos-x86_64.rqp`
+- `tempify-cli-<version>-macos-aarch64.rqp`
 
 ## ReqPack-Install
 
@@ -60,17 +60,23 @@ Tempify `.rqp` installiert:
 - stabilen Symlink `~/.local/bin/tempify`
 - gebuendeltes ReqPack-Plugin `tempify` unter `$XDG_DATA_HOME/reqpack/plugins/tempify/`
 
+Naming:
+
+- ReqPack-CLI-Paketname ist `tempify-cli`
+- ReqPack-Plugin-/Systemname fuer Templates bleibt `tempify`
+- dadurch bleibt `rqp install tempify <template-id>` konfliktfrei
+
 Beispiel mit lokalem Paket:
 
 ```bash
-rqp install ./dist/tempify-0.1.0-linux-x86_64.rqp --non-interactive
+rqp install ./dist/tempify-cli-0.1.0-linux-x86_64.rqp --non-interactive
 ~/.local/bin/tempify --help
 ```
 
 Beispiel mit Release-Repository-Index:
 
 ```bash
-rqp install rqp:tempify --non-interactive
+rqp install rqp:tempify-cli --non-interactive
 ```
 
 Hinweis:

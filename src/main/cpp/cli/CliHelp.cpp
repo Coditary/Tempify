@@ -102,6 +102,7 @@ std::string format_list_help() {
     });
     append_section(stream, "Notes", {
         "Merges workspace templates with shared local template store.",
+        "Also shows registry-cached templates when ReqPack has populated reqpack-available.json.",
     });
     return stream.str();
 }
@@ -157,6 +158,7 @@ std::string format_info_help() {
     });
     append_section(stream, "Notes", {
         "Shows template metadata, question summary, include ids, and hook presence.",
+        "Falls back to registry-cached metadata when template is not installed locally.",
     });
     return stream.str();
 }

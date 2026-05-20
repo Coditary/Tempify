@@ -18,6 +18,7 @@
 #include "tempify/prebyte/PrebyteRenderer.h"
 #include "tempify/question/AnswerFile.h"
 #include "tempify/question/QuestionProcessor.h"
+#include "tempify/store/AvailableTemplateCache.h"
 #include "tempify/store/LocalTemplateStore.h"
 #include "tempify/support/Errors.h"
 #include "tempify/support/Paths.h"
@@ -542,21 +543,74 @@ std::string format_doctor_json(const std::filesystem::path& data_root,
 std::string format_catalog_json(const tempify::app_internal::TemplateCatalog& catalog) {
     std::ostringstream stream;
     stream << "{\n";
-    stream << "  \"total\": " << catalog.infos.size() << ",\n";
+    stream << "  \"total\": " << catalog.visible.size() << ",\n";
     stream << "  \"templates\": [\n";
-    for (std::size_t index = 0; index < catalog.infos.size(); ++index) {
-        const auto& info = catalog.infos[index];
+    for (std::size_t index = 0; index < catalog.visible.size(); ++index) {
+        const auto& record = catalog.visible[index];
+        const auto& info = record.info;
+        const char* status = "available";
+        switch (record.status) {
+        case tempify::app_internal::VisibleTemplateStatus::Workspace:
+            status = "workspace";
+            break;
+        case tempify::app_internal::VisibleTemplateStatus::Installed:
+            status = "installed";
+            break;
+        case tempify::app_internal::VisibleTemplateStatus::Available:
+            status = "available";
+            break;
+        }
         stream << "    {\"id\": \"" << json_escape(info.id)
                << "\", \"name\": \"" << json_escape(info.name)
                << "\", \"description\": \"" << json_escape(info.description)
                << "\", \"version\": \"" << json_escape(info.version)
-               << "\", \"root\": \"" << json_escape(info.root.string()) << "\"}";
-        if (index + 1 < catalog.infos.size()) {
+               << "\", \"installed\": " << (record.installed ? "true" : "false")
+               << ", \"status\": \"" << status << "\", \"root\": ";
+        if (info.root.empty()) {
+            stream << "null";
+        } else {
+            stream << "\"" << json_escape(info.root.string()) << "\"";
+        }
+        stream << '}';
+        if (index + 1 < catalog.visible.size()) {
             stream << ',';
         }
         stream << '\n';
     }
     stream << "  ]\n";
+    stream << "}\n";
+    return stream.str();
+}
+
+std::string format_available_template_info_text(const tempify::AvailableTemplateRecord& record) {
+    std::ostringstream stream;
+    stream << record.id;
+    if (!record.name.empty()) {
+        stream << " (" << record.name << ')';
+    }
+    stream << '\n';
+    stream << "Availability: available (registry cache)\n";
+    stream << "Version: " << (record.version.empty() ? "<none>" : record.version) << '\n';
+    stream << "Description: " << (record.description.empty() ? "<none>" : record.description) << '\n';
+    stream << "Repository: " << (record.repository_id.empty() ? "<none>" : record.repository_id) << '\n';
+    stream << "Source URL: " << (record.source_url.empty() ? "<none>" : record.source_url) << '\n';
+    stream << "Source ref: " << (record.source_ref.empty() ? "<none>" : record.source_ref) << '\n';
+    stream << "Source subdir: " << (record.source_subdir.empty() ? "<none>" : record.source_subdir) << '\n';
+    return stream.str();
+}
+
+std::string format_available_template_info_json(const tempify::AvailableTemplateRecord& record) {
+    std::ostringstream stream;
+    stream << "{\n";
+    stream << "  \"template_id\": \"" << json_escape(record.id) << "\",\n";
+    stream << "  \"name\": \"" << json_escape(record.name) << "\",\n";
+    stream << "  \"description\": \"" << json_escape(record.description) << "\",\n";
+    stream << "  \"version\": \"" << json_escape(record.version) << "\",\n";
+    stream << "  \"availability\": \"available (registry cache)\",\n";
+    stream << "  \"repository\": \"" << json_escape(record.repository_id) << "\",\n";
+    stream << "  \"source_url\": \"" << json_escape(record.source_url) << "\",\n";
+    stream << "  \"source_ref\": \"" << json_escape(record.source_ref) << "\",\n";
+    stream << "  \"source_subdir\": \"" << json_escape(record.source_subdir) << "\"\n";
     stream << "}\n";
     return stream.str();
 }
@@ -795,6 +849,7 @@ int TempifyApp::run(const std::vector<std::string>& args) const {
     const TemplateLoader loader(lua_engine);
     const std::filesystem::path data_root = resolve_tempify_data_root();
     const LocalTemplateStore store(data_root);
+    const AvailableTemplateCache available_cache(data_root);
 
     if (request.mode == CliMode::Refresh) {
         const std::size_t count = store.refresh(loader);
@@ -829,7 +884,7 @@ int TempifyApp::run(const std::vector<std::string>& args) const {
 
         std::string catalog_status;
         try {
-            const app_internal::TemplateCatalog catalog = app_internal::build_catalog(workspace_templates_root, store, loader);
+            const app_internal::TemplateCatalog catalog = app_internal::build_catalog(workspace_templates_root, store, available_cache, loader);
             catalog_status = std::to_string(catalog.infos.size()) + " templates visible";
         } catch (const TempifyError& error) {
             catalog_status = error.what();
@@ -855,7 +910,7 @@ int TempifyApp::run(const std::vector<std::string>& args) const {
         return 0;
     }
 
-    const app_internal::TemplateCatalog catalog = app_internal::build_catalog(workspace_templates_root, store, loader);
+    const app_internal::TemplateCatalog catalog = app_internal::build_catalog(workspace_templates_root, store, available_cache, loader);
 
     if (request.mode == CliMode::TemplateList) {
         if (request.list_json) {
@@ -867,8 +922,26 @@ int TempifyApp::run(const std::vector<std::string>& args) const {
     }
 
     if (request.mode == CliMode::TemplateInfo) {
-        const std::filesystem::path template_root = app_internal::resolve_template_root(request, catalog, store);
-        const TemplateManifest manifest = loader.load(template_root, catalog.index);
+        std::optional<std::filesystem::path> template_root;
+        try {
+            template_root = app_internal::resolve_template_root(request, catalog, store);
+        } catch (const TempifyError& error) {
+            if (std::string_view(error.what()).find("Template not found: ") != 0) {
+                throw;
+            }
+            const auto available = available_cache.find_template(request.template_ref);
+            if (!available.has_value()) {
+                throw;
+            }
+            if (request.info_json) {
+                std::cout << format_available_template_info_json(*available);
+            } else {
+                std::cout << format_available_template_info_text(*available);
+            }
+            return 0;
+        }
+
+        const TemplateManifest manifest = loader.load(*template_root, catalog.index);
         if (request.info_json) {
             std::cout << format_template_info_json(manifest);
         } else {

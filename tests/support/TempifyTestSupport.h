@@ -393,4 +393,9 @@ inline void create_shared_template(const std::filesystem::path& shared_root,
                                                readme_message));
 }
 
+inline void write_available_template_cache(const std::filesystem::path& shared_root,
+                                           const std::string& payload) {
+    write_text_file(shared_root / "index" / "reqpack-available.json", payload);
+}
+
 }

@@ -67,7 +67,7 @@ if not clean_plugin_result.success then
 end
 
 local runtime_plugin_root = layout.join_path(paths.version_root, "share/reqpack/plugins/tempify")
-for _, relative_path in ipairs({"metadata.json", "reqpack.lua", "run.lua", "scripts/install.lua", "scripts/remove.lua"}) do
+for _, relative_path in ipairs({"metadata.json", "reqpack.lua", "run.lua", "default-template-repositories.json", "scripts/install.lua", "scripts/remove.lua"}) do
   local source = layout.join_path(runtime_plugin_root, relative_path)
   local target = layout.join_path(paths.plugin_root, relative_path)
   local parent_dir = layout.parent_dir(target)

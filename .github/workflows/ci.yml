@@ -170,7 +170,7 @@ jobs:
           temp_home="$RUNNER_TEMP/tempify-rqp-home"
           rm -rf "$temp_home"
           mkdir -p "$temp_home"
-          HOME="$temp_home" XDG_DATA_HOME="$temp_home/.local/share" ./reqpack-runtime/root/rqp install ./dist/tempify-${GITHUB_REF_NAME#v}-${{ matrix.platform }}-${{ matrix.arch }}.rqp --non-interactive
+          HOME="$temp_home" XDG_DATA_HOME="$temp_home/.local/share" ./reqpack-runtime/root/rqp install ./dist/tempify-cli-${GITHUB_REF_NAME#v}-${{ matrix.platform }}-${{ matrix.arch }}.rqp --non-interactive
           HOME="$temp_home" XDG_DATA_HOME="$temp_home/.local/share" "$temp_home/.local/bin/tempify" --help >/dev/null
           test -f "$temp_home/.local/share/reqpack/plugins/tempify/run.lua"
 

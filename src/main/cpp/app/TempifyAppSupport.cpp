@@ -17,6 +17,25 @@ namespace tempify::app_internal {
 
 namespace {
 
+bool visible_record_beats(const tempify::app_internal::VisibleTemplateRecord& candidate,
+                          const tempify::app_internal::VisibleTemplateRecord& current) {
+    using tempify::app_internal::VisibleTemplateStatus;
+
+    auto rank = [](const VisibleTemplateStatus status) {
+        switch (status) {
+        case VisibleTemplateStatus::Workspace:
+            return 3;
+        case VisibleTemplateStatus::Installed:
+            return 2;
+        case VisibleTemplateStatus::Available:
+            return 1;
+        }
+        return 0;
+    };
+
+    return rank(candidate.status) > rank(current.status);
+}
+
 std::vector<std::filesystem::path> scan_template_roots(const std::filesystem::path& templates_root) {
     std::vector<std::filesystem::path> roots;
     std::error_code error;
@@ -41,8 +60,10 @@ std::vector<std::filesystem::path> scan_template_roots(const std::filesystem::pa
 
 TemplateCatalog build_catalog(const std::optional<std::filesystem::path>& workspace_templates_root,
                               const LocalTemplateStore& store,
+                              const AvailableTemplateCache& available_cache,
                               const TemplateLoader& loader) {
     TemplateCatalog catalog;
+    std::map<std::string, VisibleTemplateRecord> visible_by_id;
 
     if (workspace_templates_root.has_value()) {
         for (const auto& root : scan_template_roots(*workspace_templates_root)) {
@@ -57,6 +78,12 @@ TemplateCatalog build_catalog(const std::optional<std::filesystem::path>& worksp
             }
             catalog.index[info.id] = root;
             catalog.infos.push_back(std::move(info));
+            const TemplateInfo& stored = catalog.infos.back();
+            visible_by_id[stored.id] = VisibleTemplateRecord{
+                .info = stored,
+                .status = VisibleTemplateStatus::Workspace,
+                .installed = true,
+            };
         }
     }
 
@@ -75,17 +102,53 @@ TemplateCatalog build_catalog(const std::optional<std::filesystem::path>& worksp
             continue;
         }
 
-        catalog.index[entry.id] = entry.path;
-        catalog.infos.push_back({
+        TemplateInfo info{
             .id = entry.id,
             .name = entry.name,
             .description = entry.description,
             .version = entry.version,
             .root = entry.path,
-        });
+        };
+        catalog.index[entry.id] = entry.path;
+        catalog.infos.push_back(info);
+        visible_by_id[entry.id] = VisibleTemplateRecord{
+            .info = info,
+            .status = VisibleTemplateStatus::Installed,
+            .installed = true,
+        };
+    }
+
+    for (const auto& entry : available_cache.list_templates()) {
+        catalog.available_index[entry.id] = entry;
+        VisibleTemplateRecord candidate{
+            .info = TemplateInfo{
+                .id = entry.id,
+                .name = entry.name,
+                .description = entry.description,
+                .version = entry.version,
+                .root = {},
+            },
+            .status = VisibleTemplateStatus::Available,
+            .installed = false,
+            .available = entry,
+        };
+
+        const auto existing = visible_by_id.find(entry.id);
+        if (existing == visible_by_id.end() || visible_record_beats(candidate, existing->second)) {
+            visible_by_id[entry.id] = std::move(candidate);
+        } else if (!existing->second.available.has_value()) {
+            existing->second.available = entry;
+        }
     }
 
     std::ranges::sort(catalog.infos, {}, &TemplateInfo::id);
+    for (const auto& [id, record] : visible_by_id) {
+        static_cast<void>(id);
+        catalog.visible.push_back(record);
+    }
+    std::ranges::sort(catalog.visible, {}, [](const VisibleTemplateRecord& record) {
+        return record.info.id;
+    });
     return catalog;
 }
 
@@ -116,18 +179,31 @@ std::filesystem::path resolve_template_root(const CliRequest& request,
 }
 
 void print_catalog(const TemplateCatalog& catalog) {
-    if (catalog.infos.empty()) {
+    if (catalog.visible.empty()) {
         std::cout << "No compatible Tempify templates found\n";
         return;
     }
 
-    for (const auto& info : catalog.infos) {
+    for (const auto& record : catalog.visible) {
+        const auto& info = record.info;
         std::cout << info.id;
         if (!info.name.empty()) {
             std::cout << "\t" << info.name;
         }
         if (!info.description.empty()) {
             std::cout << "\t" << info.description;
+        }
+        std::cout << "\t";
+        switch (record.status) {
+        case VisibleTemplateStatus::Workspace:
+            std::cout << "workspace";
+            break;
+        case VisibleTemplateStatus::Installed:
+            std::cout << "installed";
+            break;
+        case VisibleTemplateStatus::Available:
+            std::cout << "available";
+            break;
         }
         std::cout << '\n';
     }

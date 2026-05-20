@@ -1,6 +1,7 @@
 #include "TempifyTestSupport.h"
 
 #include "tempify/config/TempifyConfig.h"
+#include "tempify/store/AvailableTemplateCache.h"
 #include "tempify/store/LocalTemplateStore.h"
 #include "tempify/support/Errors.h"
 #include "tempify/lua/LuaEngine.h"
@@ -16,6 +17,7 @@ using tempify::test_support::ScopedDirectoryCleanup;
 using tempify::test_support::create_basic_template_at;
 using tempify::test_support::create_shared_template;
 using tempify::test_support::read_text_file;
+using tempify::test_support::write_available_template_cache;
 using tempify::test_support::write_text_file;
 
 }
@@ -104,6 +106,46 @@ TEST_CASE(LocalTemplateStore_refresh_rejects_duplicate_shared_template_ids) {
     tempify::LocalTemplateStore store(shared_root.path());
 
     REQUIRE_THROWS_AS(store.refresh(loader), tempify::TempifyError);
+}
+
+TEST_CASE(AvailableTemplateCache_missing_file_returns_empty) {
+    ScopedDirectoryCleanup shared_root(std::filesystem::temp_directory_path() / "tempify-available-cache-missing-test");
+    tempify::AvailableTemplateCache cache(shared_root.path());
+
+    REQUIRE(cache.list_templates().empty());
+    REQUIRE(!cache.find_template("missing").has_value());
+}
+
+TEST_CASE(AvailableTemplateCache_loads_records_from_reqpack_cache) {
+    ScopedDirectoryCleanup shared_root(std::filesystem::temp_directory_path() / "tempify-available-cache-load-test");
+    write_available_template_cache(shared_root.path(),
+                                   "{\n"
+                                   "  \"schemaVersion\": 1,\n"
+                                   "  \"templates\": [\n"
+                                   "    {\n"
+                                   "      \"id\": \"java-xyz\",\n"
+                                   "      \"name\": \"Java XYZ\",\n"
+                                   "      \"description\": \"Small Java starter template\",\n"
+                                   "      \"version\": \"0.1.0\",\n"
+                                   "      \"tags\": [\"java\", \"starter\"],\n"
+                                   "      \"source\": {\n"
+                                   "        \"url\": \"../tempify-templates\",\n"
+                                   "        \"ref\": \"main\",\n"
+                                   "        \"subdir\": \"java-xyz\"\n"
+                                   "      },\n"
+                                   "      \"repository\": {\n"
+                                   "        \"id\": \"local-registry\"\n"
+                                   "      }\n"
+                                   "    }\n"
+                                   "  ]\n"
+                                   "}\n");
+
+    tempify::AvailableTemplateCache cache(shared_root.path());
+    const auto entries = cache.list_templates();
+    REQUIRE_EQ(entries.size(), static_cast<std::size_t>(1));
+    REQUIRE_EQ(entries[0].id, std::string("java-xyz"));
+    REQUIRE_EQ(entries[0].repository_id, std::string("local-registry"));
+    REQUIRE_EQ(entries[0].source_subdir, std::string("java-xyz"));
 }
 
 TEST_CASE(TempifyConfig_load_and_merge_support_defaults_and_render_overlays) {

@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "repositories": [
+    {
+      "id": "tempify-default",
+      "url": "tempify-registry/templates.json",
+      "priority": 0,
+      "enabled": true
+    }
+  ]
+}

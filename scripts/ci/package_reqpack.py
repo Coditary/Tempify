@@ -28,12 +28,14 @@ PLUGIN_RUNTIME_FILES = (
     "metadata.json",
     "reqpack.lua",
     "run.lua",
+    "default-template-repositories.json",
     "scripts/install.lua",
     "scripts/remove.lua",
 )
 
 VENDOR = "Coditary"
 MAINTAINER_EMAIL = "Matographo@gmail.com"
+DEFAULT_TEMPLATE_REGISTRY_URL = "https://raw.githubusercontent.com/Coditary/tempify-registry/main/templates.json"
 
 
 def normalized_version(raw: str) -> str:
@@ -113,6 +115,21 @@ def copy_plugin_runtime(plugin_root: Path, payload_plugin_dir: Path) -> None:
         shutil.copy2(source_path, target_path)
 
 
+def write_packaged_default_template_repositories(target_path: Path) -> None:
+    payload = {
+        "schemaVersion": 1,
+        "repositories": [
+            {
+                "id": "tempify-default",
+                "url": DEFAULT_TEMPLATE_REGISTRY_URL,
+                "priority": 0,
+                "enabled": True,
+            }
+        ],
+    }
+    target_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+
 def add_tree_to_tar(archive: tarfile.TarFile, root: Path) -> None:
     for path in sorted(root.rglob("*")):
         archive.add(path, arcname=path.relative_to(root).as_posix(), recursive=False)
@@ -144,7 +161,7 @@ def build_metadata(version: str, platform: str, arch: str, archive_name: str, si
     build_date = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     return {
         "formatVersion": 1,
-        "name": "tempify",
+        "name": "tempify-cli",
         "version": version,
         "release": 1,
         "revision": 0,
@@ -256,7 +273,7 @@ def main() -> int:
         if not required_path.is_file():
             raise FileNotFoundError(f"reqpack template file not found: {required_path}")
 
-    archive_name = f"tempify-{version}-{args.platform}-{args.arch}.rqp"
+    archive_name = f"tempify-cli-{version}-{args.platform}-{args.arch}.rqp"
     archive_path = output_dir / archive_name
 
     with tempfile.TemporaryDirectory(prefix=f"tempify-rqp-{args.platform}-{args.arch}-", dir=output_dir) as temp_dir:
@@ -283,6 +300,7 @@ def main() -> int:
         for doc_name in ("README.md", "LICENSE"):
             shutil.copy2(repo_root / doc_name, payload_doc_dir / doc_name)
         copy_plugin_runtime(plugin_root, payload_plugin_dir)
+        write_packaged_default_template_repositories(payload_plugin_dir / "default-template-repositories.json")
 
         write_payload_manifest(payload_root, control_scripts_dir / "payload_files.lua")
 

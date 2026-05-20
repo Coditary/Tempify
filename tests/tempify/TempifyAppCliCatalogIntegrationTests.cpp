@@ -10,6 +10,7 @@ using tempify::test_support::ScopedDirectoryCleanup;
 using tempify::test_support::ScopedStdoutCapture;
 using tempify::test_support::ScopedTempifyDataHome;
 using tempify::test_support::create_basic_template_at;
+using tempify::test_support::write_available_template_cache;
 using tempify::test_support::write_text_file;
 
 }
@@ -381,4 +382,100 @@ TEST_CASE(TempifyApp_duplicate_workspace_template_ids_are_rejected) {
 
     tempify::TempifyApp app;
     REQUIRE_THROWS_AS(app.run({"list"}), tempify::TempifyError);
+}
+
+TEST_CASE(TempifyApp_list_json_includes_available_cached_templates) {
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-available-cache-list-data-home");
+    write_available_template_cache(data_home.shared_root(),
+                                   "{\n"
+                                   "  \"schemaVersion\": 1,\n"
+                                   "  \"templates\": [\n"
+                                   "    {\n"
+                                   "      \"id\": \"java-xyz\",\n"
+                                   "      \"name\": \"Java XYZ\",\n"
+                                   "      \"description\": \"Small Java starter template\",\n"
+                                   "      \"version\": \"0.1.0\",\n"
+                                   "      \"tags\": [\"java\", \"starter\"],\n"
+                                   "      \"source\": {\n"
+                                   "        \"type\": \"git\",\n"
+                                   "        \"url\": \"../tempify-templates\",\n"
+                                   "        \"subdir\": \"java-xyz\"\n"
+                                   "      },\n"
+                                   "      \"repository\": {\n"
+                                   "        \"id\": \"local-registry\"\n"
+                                   "      }\n"
+                                   "    }\n"
+                                   "  ]\n"
+                                   "}\n");
+
+    tempify::TempifyApp app;
+    ScopedStdoutCapture capture;
+
+    REQUIRE_EQ(app.run({"list", "--json"}), 0);
+    const std::string output = capture.str();
+    REQUIRE(output.find("\"id\": \"java-xyz\"") != std::string::npos);
+    REQUIRE(output.find("\"status\": \"available\"") != std::string::npos);
+    REQUIRE(output.find("\"installed\": false") != std::string::npos);
+    REQUIRE(output.find("\"root\": null") != std::string::npos);
+}
+
+TEST_CASE(TempifyApp_list_prefers_workspace_template_over_available_cache_duplicate) {
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-available-cache-override-data-home");
+    write_available_template_cache(data_home.shared_root(),
+                                   "{\n"
+                                   "  \"schemaVersion\": 1,\n"
+                                   "  \"templates\": [\n"
+                                   "    {\n"
+                                   "      \"id\": \"basic_cpp\",\n"
+                                   "      \"name\": \"Cached Basic\",\n"
+                                   "      \"description\": \"Cached desc\",\n"
+                                   "      \"version\": \"9.9.9\"\n"
+                                   "    }\n"
+                                   "  ]\n"
+                                   "}\n");
+
+    tempify::TempifyApp app;
+    ScopedStdoutCapture capture;
+
+    REQUIRE_EQ(app.run({"list", "--json"}), 0);
+    const std::string output = capture.str();
+    REQUIRE(output.find("\"id\": \"basic_cpp\"") != std::string::npos);
+    REQUIRE(output.find("\"name\": \"Basic C++ App\"") != std::string::npos);
+    REQUIRE(output.find("\"name\": \"Cached Basic\"") == std::string::npos);
+    REQUIRE(output.find("\"status\": \"workspace\"") != std::string::npos);
+}
+
+TEST_CASE(TempifyApp_info_json_falls_back_to_available_cache_metadata) {
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-available-cache-info-data-home");
+    write_available_template_cache(data_home.shared_root(),
+                                   "{\n"
+                                   "  \"schemaVersion\": 1,\n"
+                                   "  \"templates\": [\n"
+                                   "    {\n"
+                                   "      \"id\": \"java-xyz\",\n"
+                                   "      \"name\": \"Java XYZ\",\n"
+                                   "      \"description\": \"Small Java starter template\",\n"
+                                   "      \"version\": \"0.1.0\",\n"
+                                   "      \"source\": {\n"
+                                   "        \"type\": \"git\",\n"
+                                   "        \"url\": \"../tempify-templates\",\n"
+                                   "        \"ref\": \"main\",\n"
+                                   "        \"subdir\": \"java-xyz\"\n"
+                                   "      },\n"
+                                   "      \"repository\": {\n"
+                                   "        \"id\": \"local-registry\"\n"
+                                   "      }\n"
+                                   "    }\n"
+                                   "  ]\n"
+                                   "}\n");
+
+    tempify::TempifyApp app;
+    ScopedStdoutCapture capture;
+
+    REQUIRE_EQ(app.run({"info", "java-xyz", "--json"}), 0);
+    const std::string output = capture.str();
+    REQUIRE(output.find("\"template_id\": \"java-xyz\"") != std::string::npos);
+    REQUIRE(output.find("\"availability\": \"available (registry cache)\"") != std::string::npos);
+    REQUIRE(output.find("\"repository\": \"local-registry\"") != std::string::npos);
+    REQUIRE(output.find("\"source_subdir\": \"java-xyz\"") != std::string::npos);
 }
