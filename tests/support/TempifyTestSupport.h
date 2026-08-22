@@ -5,6 +5,7 @@
 #include "tempify/build/GenerationLock.h"
 
 #include <cstdlib>
+#include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -14,6 +15,13 @@
 #include <string>
 #include <string_view>
 #include <utility>
+
+#if defined(_WIN32)
+#include <io.h>
+#else
+#include <fcntl.h>
+#include <unistd.h>
+#endif
 
 namespace tempify::test_support {
 
@@ -105,6 +113,69 @@ class ScopedStdinCapture {
   private:
     std::istringstream buffer_;
     std::streambuf *previous_ = nullptr;
+};
+
+// Redirects the real stdin file descriptor so isatty(STDIN_FILENO) is false.
+// ScopedStdinCapture only replaces std::cin and does not affect hook TTY checks.
+class ScopedNonTtyStdin {
+  public:
+    ScopedNonTtyStdin() {
+#if defined(_WIN32)
+        saved_fd_ = _dup(_fileno(stdin));
+        FILE *null_stream = std::fopen("NUL", "r");
+        if (null_stream == nullptr || saved_fd_ == -1) {
+            throw std::runtime_error("failed to prepare non-tty stdin");
+        }
+        const int null_fd = _fileno(null_stream);
+        if (_dup2(null_fd, _fileno(stdin)) != 0) {
+            std::fclose(null_stream);
+            _close(saved_fd_);
+            saved_fd_ = -1;
+            throw std::runtime_error("failed to redirect stdin");
+        }
+        std::fclose(null_stream);
+#else
+        saved_fd_ = ::dup(STDIN_FILENO);
+        const int null_fd = ::open("/dev/null", O_RDONLY);
+        if (saved_fd_ == -1 || null_fd == -1) {
+            if (null_fd != -1) {
+                ::close(null_fd);
+            }
+            if (saved_fd_ != -1) {
+                ::close(saved_fd_);
+                saved_fd_ = -1;
+            }
+            throw std::runtime_error("failed to prepare non-tty stdin");
+        }
+        if (::dup2(null_fd, STDIN_FILENO) != 0) {
+            ::close(null_fd);
+            ::close(saved_fd_);
+            saved_fd_ = -1;
+            throw std::runtime_error("failed to redirect stdin");
+        }
+        ::close(null_fd);
+#endif
+    }
+
+    ScopedNonTtyStdin(const ScopedNonTtyStdin &) = delete;
+    ScopedNonTtyStdin &operator=(const ScopedNonTtyStdin &) = delete;
+
+    ~ScopedNonTtyStdin() {
+        if (saved_fd_ == -1) {
+            return;
+        }
+#if defined(_WIN32)
+        _dup2(saved_fd_, _fileno(stdin));
+        _close(saved_fd_);
+#else
+        ::dup2(saved_fd_, STDIN_FILENO);
+        ::close(saved_fd_);
+#endif
+        saved_fd_ = -1;
+    }
+
+  private:
+    int saved_fd_ = -1;
 };
 
 class ScopedCurrentPath {

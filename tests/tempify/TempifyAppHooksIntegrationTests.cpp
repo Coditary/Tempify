@@ -9,6 +9,7 @@ using tempify::test_support::create_slow_hook_template;
 using tempify::test_support::json_escaped_path;
 using tempify::test_support::read_text_file;
 using tempify::test_support::ScopedDirectoryCleanup;
+using tempify::test_support::ScopedNonTtyStdin;
 using tempify::test_support::ScopedStdinCapture;
 using tempify::test_support::ScopedStdoutCapture;
 using tempify::test_support::ScopedTempifyDataHome;
@@ -47,6 +48,7 @@ TEST_CASE(TempifyApp_no_hooks_skips_hook_side_effects) {
 TEST_CASE(TempifyApp_accept_hooks_ask_without_tty_runs_hooks) {
     ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-app-accept-hooks-ask-test");
     ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-accept-hooks-ask-data-home");
+    ScopedNonTtyStdin non_tty_stdin;
 
     tempify::TempifyApp app;
     const int result = app.run({

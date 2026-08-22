@@ -164,3 +164,22 @@ TEST_CASE(TempifyWorkflowE2E_strict_rejects_unknown_answers_keys_in_subprocess) 
     const std::string combined = result.stdout_text + result.stderr_text;
     REQUIRE(combined.find("mystery") != std::string::npos || combined.find("Unknown key") != std::string::npos);
 }
+
+TEST_CASE(TempifyWorkflowE2E_render_creates_nested_target_directories) {
+    ScopedDirectoryCleanup workspace(std::filesystem::temp_directory_path() / "tempify-workflow-nested-target-workspace");
+    ScopedDirectoryCleanup target_root(std::filesystem::temp_directory_path() / "tempify-workflow-nested-target-root");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-workflow-nested-target-data-home");
+    prepare_template_workspace(workspace.path());
+    const auto env = isolated_cli_env(data_home.path());
+
+    const std::filesystem::path target = target_root.path() / "deep" / "nested" / "cli-target";
+    REQUIRE(!std::filesystem::exists(target.parent_path()));
+
+    const ProcessResult render = run_cli(basic_cpp_render_args(target, "workflow-nested-target"), workspace.path(), env);
+    REQUIRE_EQ(render.exit_code, 0);
+
+    REQUIRE(std::filesystem::is_directory(target));
+    REQUIRE(std::filesystem::is_directory(target / "src"));
+    REQUIRE(std::filesystem::is_regular_file(target / "src" / "main.cpp"));
+    REQUIRE(std::filesystem::is_regular_file(target / ".tempify-lock.json"));
+}
