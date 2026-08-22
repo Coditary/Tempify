@@ -225,12 +225,18 @@ if(TEMPIFY_BUILD_FUZZERS)
         fuzz_slugify
         fuzz_answer_json
         fuzz_cli_parser
+        fuzz_tempify_config
+        fuzz_generation_lock
+        fuzz_answer_file
     )
 
     set(TEMPIFY_FUZZ_SOURCES
         tests/fault_tolerance/fuzz/SlugFuzz.cpp
         tests/fault_tolerance/fuzz/AnswerJsonFuzz.cpp
         tests/fault_tolerance/fuzz/CliParserFuzz.cpp
+        tests/fault_tolerance/fuzz/TempifyConfigFuzz.cpp
+        tests/fault_tolerance/fuzz/GenerationLockFuzz.cpp
+        tests/fault_tolerance/fuzz/AnswerFileFuzz.cpp
     )
 
     list(LENGTH TEMPIFY_FUZZ_TARGETS TEMPIFY_FUZZ_TARGET_COUNT)
@@ -247,6 +253,7 @@ if(TEMPIFY_BUILD_FUZZERS)
         list(GET TEMPIFY_FUZZ_SOURCES ${TEMPIFY_FUZZ_INDEX} TEMPIFY_FUZZ_SOURCE)
 
         add_executable(${TEMPIFY_FUZZ_TARGET} ${TEMPIFY_FUZZ_SOURCE})
+        target_include_directories(${TEMPIFY_FUZZ_TARGET} PRIVATE tests/fault_tolerance/fuzz/support)
         target_link_libraries(${TEMPIFY_FUZZ_TARGET} PRIVATE tempify_core)
         target_compile_options(${TEMPIFY_FUZZ_TARGET} PRIVATE -fsanitize=fuzzer)
         target_link_options(${TEMPIFY_FUZZ_TARGET} PRIVATE -fsanitize=fuzzer)

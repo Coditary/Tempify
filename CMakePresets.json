@@ -80,7 +80,7 @@
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_CXX_COMPILER": "clang++",
         "CMAKE_CXX_SCAN_FOR_MODULES": "OFF",
-        "BUILD_TESTING": "OFF",
+        "BUILD_TESTING": "ON",
         "TEMPIFY_BUILD_FUZZERS": "ON",
         "PREBYTE_ENABLE_SANITIZERS": "ON",
         "PREBYTE_SANITIZERS": "address,undefined"
@@ -131,7 +131,16 @@
     },
     {
       "name": "fuzz",
-      "configurePreset": "fuzz"
+      "configurePreset": "fuzz",
+      "targets": [
+        "tempify",
+        "fuzz_slugify",
+        "fuzz_answer_json",
+        "fuzz_cli_parser",
+        "fuzz_tempify_config",
+        "fuzz_generation_lock",
+        "fuzz_answer_file"
+      ]
     },
     {
       "name": "tidy-core",
@@ -164,6 +173,13 @@
     {
       "name": "msan",
       "configurePreset": "msan",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "fuzz",
+      "configurePreset": "fuzz",
       "output": {
         "outputOnFailure": true
       }

@@ -11,6 +11,9 @@ FUZZ_TARGETS=(
     fuzz_slugify
     fuzz_answer_json
     fuzz_cli_parser
+    fuzz_tempify_config
+    fuzz_generation_lock
+    fuzz_answer_file
 )
 
 seed_dir_for_target() {
@@ -21,8 +24,17 @@ seed_dir_for_target() {
         fuzz_answer_json)
             printf '%s/tests/fault_tolerance/fuzz/seeds/answer_json\n' "$ROOT"
             ;;
+        fuzz_answer_file)
+            printf '%s/tests/fault_tolerance/fuzz/seeds/answer_file\n' "$ROOT"
+            ;;
         fuzz_cli_parser)
             printf '%s/tests/fault_tolerance/fuzz/seeds/cli_parser\n' "$ROOT"
+            ;;
+        fuzz_tempify_config)
+            printf '%s/tests/fault_tolerance/fuzz/seeds/tempify_config\n' "$ROOT"
+            ;;
+        fuzz_generation_lock)
+            printf '%s/tests/fault_tolerance/fuzz/seeds/generation_lock\n' "$ROOT"
             ;;
         *)
             printf 'Unknown fuzz target: %s\n' "$1" >&2

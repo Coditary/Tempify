@@ -1,0 +1,29 @@
+#include "tempify/build/GenerationLock.h"
+#include "tempify/support/Errors.h"
+
+#include "support/FuzzTempDir.h"
+
+#include <cstddef>
+#include <cstdint>
+#include <fstream>
+#include <string>
+
+extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t *data, std::size_t size) {
+    const std::string input(reinterpret_cast<const char *>(data), size);
+    (void)tempify::content_fingerprint_hex(input);
+
+    FuzzTempDir temp_dir;
+    const std::filesystem::path path = temp_dir.path() / "lock.json";
+    {
+        std::ofstream output(path, std::ios::binary);
+        output.write(reinterpret_cast<const char *>(data), static_cast<std::streamsize>(size));
+    }
+
+    try {
+        (void)tempify::load_generation_lock(path);
+    } catch (const tempify::TempifyError &) {
+    } catch (const std::exception &) {
+    }
+
+    return 0;
+}

@@ -1,0 +1,21 @@
+{
+  "tempify_version": "0.1.2",
+  "build_root": "/tmp/fuzz-out",
+  "generated_at": "2026-01-01T00:00:00Z",
+  "existing_path_behavior": "error",
+  "hook_acceptance": "yes",
+  "hooks_disabled": false,
+  "managed_files": ["README.md"],
+  "managed_file_hashes": {
+    "README.md": "abc123"
+  },
+  "values": {
+    "project_name": "Fuzz"
+  },
+  "template": {
+    "id": "basic_cpp",
+    "name": "Basic C++",
+    "version": "1.0.0",
+    "root": "/tmp/templates/basic_cpp"
+  }
+}

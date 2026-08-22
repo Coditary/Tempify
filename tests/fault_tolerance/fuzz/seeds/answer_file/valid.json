@@ -1,0 +1,7 @@
+{
+  "project_name": "demo",
+  "name_slug": "demo-app",
+  "namespace": "demo_ns",
+  "include_ci": false,
+  "author": "Fuzz Tester"
+}
