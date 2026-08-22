@@ -1,7 +1,9 @@
-.PHONY: configure build start run test clean analyze lint security static-analysis format format-check
+.PHONY: configure build start run test clean analyze lint security static-analysis format format-check coverage
 
 BUILD_DIR ?= build
 CLANG_TIDY_BUILD_DIR := build-cmake/tidy
+COVERAGE_BUILD_DIR := build-cmake/coverage
+COVERAGE_MIN_LINE ?= 85
 
 ifdef VCPKG_ROOT
 CMAKE_VCPKG_ARGS := -DCMAKE_TOOLCHAIN_FILE=$(VCPKG_ROOT)/scripts/buildsystems/vcpkg.cmake
@@ -47,6 +49,13 @@ format:
 format-check:
 	chmod +x scripts/ci/run_clang_format.sh
 	./scripts/ci/run_clang_format.sh check
+
+coverage:
+	cmake --preset coverage $(CMAKE_VCPKG_ARGS)
+	cmake --build --preset coverage-tests --parallel
+	ctest --preset coverage
+	chmod +x scripts/ci/generate_coverage_report.sh
+	COVERAGE_MIN_LINE=$(COVERAGE_MIN_LINE) ./scripts/ci/generate_coverage_report.sh
 
 clean:
 	rm -rf $(BUILD_DIR) build-cmake

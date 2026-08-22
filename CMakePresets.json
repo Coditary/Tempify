@@ -16,6 +16,19 @@
       }
     },
     {
+      "name": "coverage",
+      "displayName": "Coverage Ninja",
+      "inherits": "dev",
+      "binaryDir": "${sourceDir}/build-cmake/coverage",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "BUILD_TESTING": "ON",
+        "TEMPIFY_ENABLE_COVERAGE": "ON"
+      }
+    },
+    {
       "name": "tidy",
       "displayName": "Clang-Tidy Ninja",
       "inherits": "dev",
@@ -35,9 +48,27 @@
       "configurePreset": "dev"
     },
     {
+      "name": "coverage",
+      "configurePreset": "coverage"
+    },
+    {
+      "name": "coverage-tests",
+      "configurePreset": "coverage",
+      "targets": ["tempify_tests", "tempify"]
+    },
+    {
       "name": "tidy-core",
       "configurePreset": "tidy",
       "targets": ["tempify_core", "tempify", "tempify_tests"]
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "coverage",
+      "configurePreset": "coverage",
+      "output": {
+        "outputOnFailure": true
+      }
     }
   ]
 }
