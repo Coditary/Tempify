@@ -85,6 +85,19 @@ TEST_CASE(LocalTemplateStore_refresh_writes_index_and_lists_shared_templates) {
     REQUIRE_EQ(entries[0].version, std::string("1.2.3"));
     REQUIRE_EQ(entries[0].path, std::filesystem::absolute(shared_root.path() / "templates" / "sample_tpl"));
     REQUIRE(read_text_file(store.index_file()).find("sample_tpl") != std::string::npos);
+
+    const auto found = store.find_template("sample_tpl");
+    REQUIRE(found.has_value());
+    REQUIRE_EQ(found->id, std::string("sample_tpl"));
+    REQUIRE(!store.find_template("missing").has_value());
+}
+
+TEST_CASE(LocalTemplateStore_rejects_invalid_index_json) {
+    ScopedDirectoryCleanup shared_root(std::filesystem::temp_directory_path() / "tempify-store-invalid-index-test");
+    write_text_file(shared_root.path() / "index" / "templates.json", "[]\n");
+
+    tempify::LocalTemplateStore store(shared_root.path());
+    REQUIRE_THROWS_AS(store.list_templates(), tempify::TempifyError);
 }
 
 TEST_CASE(LocalTemplateStore_refresh_rejects_duplicate_shared_template_ids) {
@@ -138,6 +151,11 @@ TEST_CASE(AvailableTemplateCache_loads_records_from_reqpack_cache) {
     REQUIRE_EQ(entries[0].id, std::string("java-xyz"));
     REQUIRE_EQ(entries[0].repository_id, std::string("local-registry"));
     REQUIRE_EQ(entries[0].source_subdir, std::string("java-xyz"));
+
+    const auto found = cache.find_template("java-xyz");
+    REQUIRE(found.has_value());
+    REQUIRE_EQ(found->id, std::string("java-xyz"));
+    REQUIRE(!cache.find_template("missing").has_value());
 }
 
 TEST_CASE(TempifyConfig_load_and_merge_support_defaults_and_render_overlays) {

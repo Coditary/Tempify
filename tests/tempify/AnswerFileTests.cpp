@@ -94,3 +94,15 @@ TEST_CASE(AnswerFile_rejects_invalid_json_and_non_object_payloads) {
     REQUIRE_THROWS_AS(tempify::load_answer_file(array_path, false), tempify::TempifyError);
     REQUIRE_THROWS_AS(tempify::load_answer_file(nested_path, false), tempify::TempifyError);
 }
+
+TEST_CASE(AnswerFile_writes_nested_parent_directories) {
+    const std::filesystem::path path =
+        std::filesystem::temp_directory_path() / "tempify-answer-file-nested" / "dir" / "answers.json";
+    std::filesystem::remove_all(path.parent_path().parent_path());
+
+    tempify::write_answer_file(path, {{"project_name", "Nested"}});
+    REQUIRE(std::filesystem::is_regular_file(path));
+
+    const std::map<std::string, std::string> loaded = tempify::load_answer_file(path, false);
+    REQUIRE_EQ(loaded.at("project_name"), std::string("Nested"));
+}

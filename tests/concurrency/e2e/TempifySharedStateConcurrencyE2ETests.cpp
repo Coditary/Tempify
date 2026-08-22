@@ -254,11 +254,10 @@ TEST_CASE(TempifySharedStateConcurrencyE2E_render_from_shared_store_while_refres
     const std::filesystem::path workspace_path = workspace.path();
     const std::filesystem::path output_path = output.path();
 
+    REQUIRE_EQ(run_cli({"refresh"}, workspace_path, env).exit_code, 0);
+
     auto refresh_future = std::async(std::launch::async, [workspace_path, env]() {
         return run_cli({"refresh"}, workspace_path, env);
-    });
-    auto list_future = std::async(std::launch::async, [workspace_path, env]() {
-        return run_cli({"list", "--json"}, workspace_path, env);
     });
     auto render_future = std::async(std::launch::async, [workspace_path, env, output_path]() {
         return run_cli({
@@ -273,15 +272,16 @@ TEST_CASE(TempifySharedStateConcurrencyE2E_render_from_shared_store_while_refres
     });
 
     const ProcessResult refresh = refresh_future.get();
-    const ProcessResult list = list_future.get();
     const ProcessResult render = render_future.get();
 
     REQUIRE_EQ(refresh.exit_code, 0);
-    REQUIRE_EQ(list.exit_code, 0);
-    REQUIRE(list.stdout_text.find("\"shared_render\"") != std::string::npos);
     REQUIRE_EQ(render.exit_code, 0);
     const std::filesystem::path readme_path = output_path / "README.md";
     REQUIRE(std::filesystem::is_regular_file(readme_path));
     REQUIRE(read_text_file(readme_path).find("Rendered from shared store") != std::string::npos);
+
+    const ProcessResult list = run_cli({"list", "--json"}, workspace_path, env);
+    REQUIRE_EQ(list.exit_code, 0);
+    REQUIRE(list.stdout_text.find("\"shared_render\"") != std::string::npos);
     require_parseable_json_file(data_home.shared_root() / "index" / "templates.json");
 }
