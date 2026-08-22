@@ -52,10 +52,14 @@ format-check:
 	./scripts/ci/run_clang_format.sh check
 
 coverage:
-	cmake --preset coverage $(CMAKE_VCPKG_ARGS)
-	cmake --build --preset coverage-tests --parallel
-	ctest --preset coverage
-	chmod +x scripts/ci/generate_coverage_report.sh
+	chmod +x scripts/ci/bootstrap_vcpkg_deps.sh scripts/ci/generate_coverage_report.sh
+	env -u VCPKG_ROOT -u VCPKG_TARGET_TRIPLET ./scripts/ci/bootstrap_vcpkg_deps.sh coverage
+	set -a && . build-cmake/.vcpkg-coverage.env && set +a && \
+	cmake --preset coverage \
+		-DCMAKE_TOOLCHAIN_FILE="$$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
+		-DVCPKG_TARGET_TRIPLET="$$VCPKG_TARGET_TRIPLET" && \
+	cmake --build --preset coverage-tests --parallel && \
+	ctest --preset coverage && \
 	COVERAGE_MIN_LINE=$(COVERAGE_MIN_LINE) ./scripts/ci/generate_coverage_report.sh
 
 sanitize:

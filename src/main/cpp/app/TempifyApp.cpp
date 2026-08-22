@@ -540,7 +540,7 @@ std::string format_catalog_json(const tempify::app_internal::TemplateCatalog &ca
     for (std::size_t index = 0; index < catalog.visible.size(); ++index) {
         const auto &record = catalog.visible[index];
         const auto &info = record.info;
-        const char *status = "available";
+        const char *status;
         switch (record.status) {
         case tempify::app_internal::VisibleTemplateStatus::Workspace:
             status = "workspace";
