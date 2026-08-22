@@ -81,17 +81,84 @@ void hook_timeout_guard(lua_State *state, lua_Debug *debug) {
     luaL_error(state, "Hook timed out after %d ms", timeout_message_ms(*host));
 }
 
-std::filesystem::path resolve_input_path(const HookHost &host, const std::filesystem::path &path) {
-    if (path.is_absolute()) {
-        return path;
+bool path_starts_with(const std::filesystem::path &path, const std::filesystem::path &prefix) {
+    const std::filesystem::path normalized_path = path.lexically_normal();
+    const std::filesystem::path normalized_prefix = prefix.lexically_normal();
+    auto path_it = normalized_path.begin();
+    auto prefix_it = normalized_prefix.begin();
+    for (; prefix_it != normalized_prefix.end(); ++prefix_it, ++path_it) {
+        if (path_it == normalized_path.end()) {
+            return false;
+        }
+#if defined(_WIN32)
+        std::string path_part = path_it->string();
+        std::string prefix_part = prefix_it->string();
+        std::transform(path_part.begin(), path_part.end(), path_part.begin(),
+                       [](const unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+        std::transform(prefix_part.begin(), prefix_part.end(), prefix_part.begin(),
+                       [](const unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+        if (path_part != prefix_part) {
+            return false;
+        }
+#else
+        if (*path_it != *prefix_it) {
+            return false;
+        }
+#endif
+    }
+    return true;
+}
+
+bool path_within_root(const std::filesystem::path &path, const std::filesystem::path &root) {
+    std::error_code error;
+    const std::filesystem::path resolved = std::filesystem::weakly_canonical(path, error);
+    const std::filesystem::path resolved_root = std::filesystem::weakly_canonical(root, error);
+    if (!error) {
+        return path_starts_with(resolved, resolved_root);
+    }
+    return path_starts_with(path.lexically_normal(), root.lexically_normal());
+}
+
+void ensure_relative_path_has_no_parent_segments(lua_State *state, const std::filesystem::path &path) {
+    for (const auto &part : path.lexically_normal()) {
+        if (part == "..") {
+            const std::string path_text = path.string();
+            luaL_error(state, "Hook path escapes allowed roots: %s", path_text.c_str());
+        }
+    }
+}
+
+std::filesystem::path resolve_input_path(lua_State *state, const HookHost &host, const std::filesystem::path &path) {
+    if (path.empty()) {
+        luaL_error(state, "Hook path must be non-empty");
     }
 
-    const std::filesystem::path build_candidate = host.context->build_root / path;
+    if (path.is_absolute()) {
+        const std::filesystem::path normalized = path.lexically_normal();
+        if (path_within_root(normalized, host.context->build_root) ||
+            path_within_root(normalized, host.manifest->root)) {
+            return normalized;
+        }
+        const std::string path_text = path.string();
+        luaL_error(state, "Hook path escapes allowed roots: %s", path_text.c_str());
+    }
+
+    ensure_relative_path_has_no_parent_segments(state, path);
+
+    const std::filesystem::path build_candidate = (host.context->build_root / path).lexically_normal();
+    if (!path_within_root(build_candidate, host.context->build_root)) {
+        const std::string path_text = path.string();
+        luaL_error(state, "Hook path escapes build root: %s", path_text.c_str());
+    }
     if (std::filesystem::exists(build_candidate)) {
         return build_candidate;
     }
 
-    const std::filesystem::path template_candidate = host.manifest->root / path;
+    const std::filesystem::path template_candidate = (host.manifest->root / path).lexically_normal();
+    if (!path_within_root(template_candidate, host.manifest->root)) {
+        const std::string path_text = path.string();
+        luaL_error(state, "Hook path escapes template root: %s", path_text.c_str());
+    }
     if (std::filesystem::exists(template_candidate)) {
         return template_candidate;
     }
@@ -99,23 +166,37 @@ std::filesystem::path resolve_input_path(const HookHost &host, const std::filesy
     return build_candidate;
 }
 
-std::filesystem::path resolve_output_path(const HookHost &host, const std::filesystem::path &path) {
-    if (path.is_absolute()) {
-        return path;
+std::filesystem::path resolve_output_path(lua_State *state, const HookHost &host, const std::filesystem::path &path) {
+    if (path.empty()) {
+        luaL_error(state, "Hook path must be non-empty");
     }
-    return host.context->build_root / path;
+
+    if (!path.is_absolute()) {
+        ensure_relative_path_has_no_parent_segments(state, path);
+    }
+
+    const std::filesystem::path resolved =
+        path.is_absolute() ? path.lexically_normal() : (host.context->build_root / path).lexically_normal();
+    if (!path_within_root(resolved, host.context->build_root)) {
+        const std::string path_text = path.string();
+        luaL_error(state, "Hook path escapes build root: %s", path_text.c_str());
+    }
+
+    return resolved;
 }
 
 int hook_exists(lua_State *state) {
     const HookHost &host = *hook_host(state);
-    const std::filesystem::path path = resolve_input_path(host, luaL_checkstring(state, 1));
+    const std::filesystem::path path =
+        resolve_input_path(state, host, std::filesystem::path(luaL_checkstring(state, 1)));
     lua_pushboolean(state, std::filesystem::exists(path));
     return 1;
 }
 
 int hook_mkdir(lua_State *state) {
     const HookHost &host = *hook_host(state);
-    const std::filesystem::path path = resolve_output_path(host, luaL_checkstring(state, 1));
+    const std::filesystem::path path =
+        resolve_output_path(state, host, std::filesystem::path(luaL_checkstring(state, 1)));
     std::filesystem::create_directories(path);
     const std::string path_text = path.string();
     lua_pushlstring(state, path_text.c_str(), path_text.size());
@@ -124,14 +205,16 @@ int hook_mkdir(lua_State *state) {
 
 int hook_remove(lua_State *state) {
     const HookHost &host = *hook_host(state);
-    const std::filesystem::path path = resolve_output_path(host, luaL_checkstring(state, 1));
+    const std::filesystem::path path =
+        resolve_output_path(state, host, std::filesystem::path(luaL_checkstring(state, 1)));
     lua_pushinteger(state, static_cast<lua_Integer>(std::filesystem::remove_all(path)));
     return 1;
 }
 
 int hook_read_file(lua_State *state) {
     const HookHost &host = *hook_host(state);
-    const std::filesystem::path path = resolve_input_path(host, luaL_checkstring(state, 1));
+    const std::filesystem::path path =
+        resolve_input_path(state, host, std::filesystem::path(luaL_checkstring(state, 1)));
     std::ifstream input(path, std::ios::binary);
     if (!input) {
         const std::string path_text = path.string();
@@ -146,7 +229,8 @@ int hook_read_file(lua_State *state) {
 
 int hook_write_file(lua_State *state) {
     const HookHost &host = *hook_host(state);
-    const std::filesystem::path path = resolve_output_path(host, luaL_checkstring(state, 1));
+    const std::filesystem::path path =
+        resolve_output_path(state, host, std::filesystem::path(luaL_checkstring(state, 1)));
     const std::string content = luaL_checkstring(state, 2);
     std::filesystem::create_directories(path.parent_path());
     std::ofstream output(path, std::ios::binary);
@@ -162,7 +246,8 @@ int hook_write_file(lua_State *state) {
 
 int hook_list_files(lua_State *state) {
     const HookHost &host = *hook_host(state);
-    const std::filesystem::path path = resolve_input_path(host, luaL_checkstring(state, 1));
+    const std::filesystem::path path =
+        resolve_input_path(state, host, std::filesystem::path(luaL_checkstring(state, 1)));
     lua_newtable(state);
     if (!std::filesystem::is_directory(path)) {
         return 1;
@@ -181,7 +266,8 @@ int hook_list_files(lua_State *state) {
 
 int hook_list_dirs(lua_State *state) {
     const HookHost &host = *hook_host(state);
-    const std::filesystem::path path = resolve_input_path(host, luaL_checkstring(state, 1));
+    const std::filesystem::path path =
+        resolve_input_path(state, host, std::filesystem::path(luaL_checkstring(state, 1)));
     lua_newtable(state);
     if (!std::filesystem::is_directory(path)) {
         return 1;
@@ -200,8 +286,10 @@ int hook_list_dirs(lua_State *state) {
 
 int hook_copy(lua_State *state) {
     const HookHost &host = *hook_host(state);
-    const std::filesystem::path source = resolve_input_path(host, luaL_checkstring(state, 1));
-    const std::filesystem::path target = resolve_output_path(host, luaL_checkstring(state, 2));
+    const std::filesystem::path source =
+        resolve_input_path(state, host, std::filesystem::path(luaL_checkstring(state, 1)));
+    const std::filesystem::path target =
+        resolve_output_path(state, host, std::filesystem::path(luaL_checkstring(state, 2)));
 
     std::filesystem::create_directories(target.parent_path());
     if (std::filesystem::is_directory(source)) {
@@ -237,8 +325,10 @@ int hook_process_string(lua_State *state) {
 
 int hook_process_file(lua_State *state) {
     const HookHost &host = *hook_host(state);
-    const std::filesystem::path input = resolve_input_path(host, luaL_checkstring(state, 1));
-    const std::filesystem::path output = resolve_output_path(host, luaL_checkstring(state, 2));
+    const std::filesystem::path input =
+        resolve_input_path(state, host, std::filesystem::path(luaL_checkstring(state, 1)));
+    const std::filesystem::path output =
+        resolve_output_path(state, host, std::filesystem::path(luaL_checkstring(state, 2)));
     std::map<std::string, std::string> values = host.context->values;
     if (lua_istable(state, 3) != 0) {
         const auto overrides = lua_internal::table_to_string_map(state, 3);

@@ -2,12 +2,15 @@
 
 #include "TestHarness.h"
 
+#include "tempify/build/GenerationLock.h"
+
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <optional>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -399,6 +402,47 @@ inline void create_shared_template(const std::filesystem::path &shared_root, con
 
 inline void write_available_template_cache(const std::filesystem::path &shared_root, const std::string &payload) {
     write_text_file(shared_root / "index" / "reqpack-available.json", payload);
+}
+
+inline void inject_stale_managed_file(const std::filesystem::path &target, const std::string &relative_path,
+                                      const std::string &content) {
+    write_text_file(target / relative_path, content);
+    const std::string hash = tempify::content_fingerprint_hex(content);
+    const std::filesystem::path lock_path = target / ".tempify-lock.json";
+    std::string lock_text = read_text_file(lock_path);
+
+    const std::string files_close = "  ],\n  \"managed_file_hashes\"";
+    const std::size_t files_close_pos = lock_text.find(files_close);
+    if (files_close_pos == std::string::npos) {
+        throw std::runtime_error("managed_files section not found in lock file");
+    }
+    lock_text.insert(files_close_pos,
+                     ",\n    \"" + json_escape(relative_path) + "\"");
+
+    const std::string hashes_close = "  },\n  \"values\"";
+    const std::size_t hashes_close_pos = lock_text.find(hashes_close);
+    if (hashes_close_pos == std::string::npos) {
+        throw std::runtime_error("managed_file_hashes section not found in lock file");
+    }
+    lock_text.insert(hashes_close_pos, ",\n    \"" + json_escape(relative_path) + "\": \"" + hash + "\"");
+
+    write_text_file(lock_path, lock_text);
+}
+
+inline void inject_stale_managed_file_without_hash(const std::filesystem::path &target,
+                                                   const std::string &relative_path, const std::string &content) {
+    write_text_file(target / relative_path, content);
+    const std::filesystem::path lock_path = target / ".tempify-lock.json";
+    std::string lock_text = read_text_file(lock_path);
+
+    const std::string files_close = "  ],\n  \"managed_file_hashes\"";
+    const std::size_t files_close_pos = lock_text.find(files_close);
+    if (files_close_pos == std::string::npos) {
+        throw std::runtime_error("managed_files section not found in lock file");
+    }
+    lock_text.insert(files_close_pos, ",\n    \"" + json_escape(relative_path) + "\"");
+
+    write_text_file(lock_path, lock_text);
 }
 
 } // namespace tempify::test_support

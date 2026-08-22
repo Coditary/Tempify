@@ -825,3 +825,564 @@ TEST_CASE(Tempify_json_error_wraps_reapply_subcommand_block_with_structured_deta
     REQUIRE(error_output.find("README.md") != std::string::npos);
     std::filesystem::remove(stderr_file);
 }
+
+TEST_CASE(TempifyApp_reapply_deletes_managed_file_no_longer_in_template_output) {
+    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-app-reapply-delete-target");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-reapply-delete-data-home");
+    tempify::TempifyApp app;
+    REQUIRE_EQ(app.run({
+                   "basic_cpp",
+                   target.path().string(),
+                   "--set",
+                   "project_name=Reapply Delete App",
+                   "--set",
+                   "name_slug=reapply-delete-app",
+                   "--set",
+                   "namespace=reapply_delete_ns",
+                   "--set",
+                   "include_ci=false",
+                   "--set",
+                   "author=Reapply Delete Tester",
+               }),
+               0);
+
+    tempify::test_support::inject_stale_managed_file(target.path(), "old-managed.txt", "removed-by-template-update\n");
+    REQUIRE(std::filesystem::is_regular_file(target.path() / "old-managed.txt"));
+
+    ScopedStdoutCapture capture;
+    REQUIRE_EQ(app.run({
+                   "basic_cpp",
+                   target.path().string(),
+                   "--set",
+                   "project_name=Reapply Delete App",
+                   "--set",
+                   "name_slug=reapply-delete-app",
+                   "--set",
+                   "namespace=reapply_delete_ns",
+                   "--set",
+                   "include_ci=false",
+                   "--set",
+                   "author=Reapply Delete Tester",
+                   "--reapply",
+               }),
+               0);
+
+    const std::string output = capture.str();
+    REQUIRE(output.find("Reapplied basic_cpp") != std::string::npos);
+    REQUIRE(output.find("Deleted: 1") != std::string::npos);
+    REQUIRE(!std::filesystem::exists(target.path() / "old-managed.txt"));
+    const std::string lock_text = read_text_file(target.path() / ".tempify-lock.json");
+    REQUIRE(lock_text.find("old-managed.txt") == std::string::npos);
+    REQUIRE(std::filesystem::is_regular_file(target.path() / "README.md"));
+}
+
+TEST_CASE(TempifyApp_reapply_blocks_delete_when_stale_file_was_locally_modified) {
+    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-app-reapply-delete-conflict-target");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() /
+                                    "tempify-app-reapply-delete-conflict-data-home");
+    tempify::TempifyApp app;
+    REQUIRE_EQ(app.run({
+                   "basic_cpp",
+                   target.path().string(),
+                   "--set",
+                   "project_name=Reapply Delete Conflict App",
+                   "--set",
+                   "name_slug=reapply-delete-conflict-app",
+                   "--set",
+                   "namespace=reapply_delete_conflict_ns",
+                   "--set",
+                   "include_ci=false",
+                   "--set",
+                   "author=Reapply Delete Conflict Tester",
+               }),
+               0);
+
+    tempify::test_support::inject_stale_managed_file(target.path(), "old-managed.txt", "removed-by-template-update\n");
+    write_text_file(target.path() / "old-managed.txt", "user-edited-stale-content\n");
+
+    try {
+        static_cast<void>(app.run({
+            "basic_cpp",
+            target.path().string(),
+            "--set",
+            "project_name=Reapply Delete Conflict App",
+            "--set",
+            "name_slug=reapply-delete-conflict-app",
+            "--set",
+            "namespace=reapply_delete_conflict_ns",
+            "--set",
+            "include_ci=false",
+            "--set",
+            "author=Reapply Delete Conflict Tester",
+            "--reapply",
+        }));
+        REQUIRE(false);
+    } catch (const tempify::ReapplyBlockedError &error) {
+        REQUIRE(std::string(error.what()).find("conflict item") != std::string::npos);
+        REQUIRE(std::string(error.what()).find("old-managed.txt") != std::string::npos);
+    }
+
+    REQUIRE(std::filesystem::is_regular_file(target.path() / "old-managed.txt"));
+    REQUIRE_EQ(read_text_file(target.path() / "old-managed.txt"), std::string("user-edited-stale-content\n"));
+}
+
+TEST_CASE(TempifyApp_reapply_json_reports_deleted_managed_file) {
+    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-app-reapply-delete-json-target");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-reapply-delete-json-data-home");
+    tempify::TempifyApp app;
+    REQUIRE_EQ(app.run({
+                   "basic_cpp",
+                   target.path().string(),
+                   "--set",
+                   "project_name=Reapply Delete Json App",
+                   "--set",
+                   "name_slug=reapply-delete-json-app",
+                   "--set",
+                   "namespace=reapply_delete_json_ns",
+                   "--set",
+                   "include_ci=false",
+                   "--set",
+                   "author=Reapply Delete Json Tester",
+               }),
+               0);
+
+    tempify::test_support::inject_stale_managed_file(target.path(), "old-managed.txt", "removed-by-template-update\n");
+
+    ScopedStdoutCapture capture;
+    REQUIRE_EQ(app.run({
+                   "basic_cpp",
+                   target.path().string(),
+                   "--set",
+                   "project_name=Reapply Delete Json App",
+                   "--set",
+                   "name_slug=reapply-delete-json-app",
+                   "--set",
+                   "namespace=reapply_delete_json_ns",
+                   "--set",
+                   "include_ci=false",
+                   "--set",
+                   "author=Reapply Delete Json Tester",
+                   "--reapply",
+                   "--json",
+               }),
+               0);
+
+    const std::string output = capture.str();
+    REQUIRE(output.find("\"delete\": 1") != std::string::npos);
+    REQUIRE(output.find("\"applied\"") != std::string::npos);
+    REQUIRE(output.find("old-managed.txt") != std::string::npos);
+    REQUIRE(!std::filesystem::exists(target.path() / "old-managed.txt"));
+}
+
+TEST_CASE(TempifyApp_reapply_blocks_delete_when_lock_has_no_baseline_hash) {
+    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-app-reapply-delete-review-target");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-reapply-delete-review-data-home");
+    tempify::TempifyApp app;
+    REQUIRE_EQ(app.run({
+                   "basic_cpp",
+                   target.path().string(),
+                   "--set",
+                   "project_name=Reapply Delete Review App",
+                   "--set",
+                   "name_slug=reapply-delete-review-app",
+                   "--set",
+                   "namespace=reapply_delete_review_ns",
+                   "--set",
+                   "include_ci=false",
+                   "--set",
+                   "author=Reapply Delete Review Tester",
+               }),
+               0);
+
+    tempify::test_support::inject_stale_managed_file_without_hash(target.path(), "old-managed.txt",
+                                                                  "removed-by-template-update\n");
+
+    try {
+        static_cast<void>(app.run({
+            "basic_cpp",
+            target.path().string(),
+            "--set",
+            "project_name=Reapply Delete Review App",
+            "--set",
+            "name_slug=reapply-delete-review-app",
+            "--set",
+            "namespace=reapply_delete_review_ns",
+            "--set",
+            "include_ci=false",
+            "--set",
+            "author=Reapply Delete Review Tester",
+            "--reapply",
+        }));
+        REQUIRE(false);
+    } catch (const tempify::ReapplyBlockedError &error) {
+        REQUIRE(std::string(error.what()).find("review item") != std::string::npos);
+        REQUIRE(std::string(error.what()).find("old-managed.txt") != std::string::npos);
+    }
+
+    REQUIRE(std::filesystem::is_regular_file(target.path() / "old-managed.txt"));
+}
+
+TEST_CASE(TempifyApp_reapply_report_shows_delete_candidate_without_removing_file) {
+    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-app-reapply-delete-report-target");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-reapply-delete-report-data-home");
+    tempify::TempifyApp app;
+    REQUIRE_EQ(app.run({
+                   "basic_cpp",
+                   target.path().string(),
+                   "--set",
+                   "project_name=Reapply Delete Report App",
+                   "--set",
+                   "name_slug=reapply-delete-report-app",
+                   "--set",
+                   "namespace=reapply_delete_report_ns",
+                   "--set",
+                   "include_ci=false",
+                   "--set",
+                   "author=Reapply Delete Report Tester",
+               }),
+               0);
+
+    tempify::test_support::inject_stale_managed_file(target.path(), "old-managed.txt", "removed-by-template-update\n");
+    const std::string stale_content = read_text_file(target.path() / "old-managed.txt");
+
+    ScopedStdoutCapture capture;
+    REQUIRE_EQ(app.run({
+                   "basic_cpp",
+                   target.path().string(),
+                   "--set",
+                   "project_name=Reapply Delete Report App",
+                   "--set",
+                   "name_slug=reapply-delete-report-app",
+                   "--set",
+                   "namespace=reapply_delete_report_ns",
+                   "--set",
+                   "include_ci=false",
+                   "--set",
+                   "author=Reapply Delete Report Tester",
+                   "--reapply",
+                   "--report",
+               }),
+               0);
+
+    const std::string output = capture.str();
+    REQUIRE(output.find("delete  old-managed.txt") != std::string::npos);
+    REQUIRE(output.find("Reapply delete: 1") != std::string::npos);
+    REQUIRE_EQ(read_text_file(target.path() / "old-managed.txt"), stale_content);
+    REQUIRE(read_text_file(target.path() / ".tempify-lock.json").find("old-managed.txt") != std::string::npos);
+}
+
+TEST_CASE(TempifyApp_reapply_json_blocks_delete_conflict_without_removing_stale_file) {
+    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-app-reapply-delete-json-conflict-target");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() /
+                                    "tempify-app-reapply-delete-json-conflict-data-home");
+    tempify::TempifyApp app;
+    REQUIRE_EQ(app.run({
+                   "basic_cpp",
+                   target.path().string(),
+                   "--set",
+                   "project_name=Reapply Delete Json Conflict App",
+                   "--set",
+                   "name_slug=reapply-delete-json-conflict-app",
+                   "--set",
+                   "namespace=reapply_delete_json_conflict_ns",
+                   "--set",
+                   "include_ci=false",
+                   "--set",
+                   "author=Reapply Delete Json Conflict Tester",
+               }),
+               0);
+
+    tempify::test_support::inject_stale_managed_file(target.path(), "old-managed.txt", "removed-by-template-update\n");
+    write_text_file(target.path() / "old-managed.txt", "user-edited-stale-content\n");
+
+    const std::filesystem::path stderr_file =
+        std::filesystem::temp_directory_path() / "tempify-app-reapply-delete-json-conflict-stderr.txt";
+    std::filesystem::remove(stderr_file);
+    const int exit_code = run_tempify_and_capture_stderr(
+        {
+            "basic_cpp",
+            target.path().string(),
+            "--set",
+            "project_name=Reapply Delete Json Conflict App",
+            "--set",
+            "name_slug=reapply-delete-json-conflict-app",
+            "--set",
+            "namespace=reapply_delete_json_conflict_ns",
+            "--set",
+            "include_ci=false",
+            "--set",
+            "author=Reapply Delete Json Conflict Tester",
+            "--reapply",
+            "--json",
+        },
+        stderr_file);
+
+    REQUIRE(exit_code != 0);
+    const std::string error_output = read_text_file(stderr_file);
+    REQUIRE(error_output.find("\"code\": \"REAPPLY_BLOCKED\"") != std::string::npos);
+    REQUIRE(error_output.find("old-managed.txt") != std::string::npos);
+    REQUIRE(error_output.find("\"conflict\": [") != std::string::npos);
+    REQUIRE(std::filesystem::is_regular_file(target.path() / "old-managed.txt"));
+    std::filesystem::remove(stderr_file);
+}
+
+TEST_CASE(TempifyApp_reapply_subcommand_blocks_delete_when_stale_file_was_locally_modified) {
+    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-app-reapply-delete-subcommand-conflict-target");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() /
+                                    "tempify-app-reapply-delete-subcommand-conflict-data-home");
+    tempify::TempifyApp app;
+    REQUIRE_EQ(app.run({
+                   "basic_cpp",
+                   target.path().string(),
+                   "--set",
+                   "project_name=Reapply Delete Subcommand Conflict App",
+                   "--set",
+                   "name_slug=reapply-delete-subcommand-conflict-app",
+                   "--set",
+                   "namespace=reapply_delete_subcommand_conflict_ns",
+                   "--set",
+                   "include_ci=false",
+                   "--set",
+                   "author=Reapply Delete Subcommand Conflict Tester",
+               }),
+               0);
+
+    tempify::test_support::inject_stale_managed_file(target.path(), "old-managed.txt", "removed-by-template-update\n");
+    write_text_file(target.path() / "old-managed.txt", "user-edited-stale-content\n");
+
+    const std::filesystem::path stderr_file =
+        std::filesystem::temp_directory_path() / "tempify-app-reapply-delete-subcommand-conflict-stderr.txt";
+    std::filesystem::remove(stderr_file);
+    const int exit_code = run_tempify_and_capture_stderr(
+        {
+            "reapply",
+            "basic_cpp",
+            target.path().string(),
+            "--set",
+            "project_name=Reapply Delete Subcommand Conflict App",
+            "--set",
+            "name_slug=reapply-delete-subcommand-conflict-app",
+            "--set",
+            "namespace=reapply_delete_subcommand_conflict_ns",
+            "--set",
+            "include_ci=false",
+            "--set",
+            "author=Reapply Delete Subcommand Conflict Tester",
+        },
+        stderr_file);
+
+    REQUIRE(exit_code != 0);
+    const std::string error_output = read_text_file(stderr_file);
+    REQUIRE(error_output.find("conflict item") != std::string::npos || error_output.find("REAPPLY_BLOCKED") != std::string::npos);
+    REQUIRE(error_output.find("old-managed.txt") != std::string::npos);
+    REQUIRE(std::filesystem::is_regular_file(target.path() / "old-managed.txt"));
+    std::filesystem::remove(stderr_file);
+}
+
+TEST_CASE(TempifyApp_reapply_blocks_delete_on_version_downgrade_without_removing_stale_file) {
+    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-app-reapply-delete-downgrade-target");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-reapply-delete-downgrade-data-home");
+    tempify::TempifyApp app;
+    REQUIRE_EQ(app.run({
+                   "basic_cpp",
+                   target.path().string(),
+                   "--set",
+                   "project_name=Reapply Delete Downgrade App",
+                   "--set",
+                   "name_slug=reapply-delete-downgrade-app",
+                   "--set",
+                   "namespace=reapply_delete_downgrade_ns",
+                   "--set",
+                   "include_ci=false",
+                   "--set",
+                   "author=Reapply Delete Downgrade Tester",
+               }),
+               0);
+
+    tempify::test_support::inject_stale_managed_file(target.path(), "old-managed.txt", "removed-by-template-update\n");
+    const std::string stale_content = read_text_file(target.path() / "old-managed.txt");
+
+    std::string lock_text = read_text_file(target.path() / ".tempify-lock.json");
+    const std::string current_version = "\"version\": \"0.1.0\"";
+    const auto version_pos = lock_text.find(current_version);
+    REQUIRE(version_pos != std::string::npos);
+    lock_text.replace(version_pos, current_version.size(), "\"version\": \"0.2.0\"");
+    write_text_file(target.path() / ".tempify-lock.json", lock_text);
+
+    try {
+        static_cast<void>(app.run({
+            "basic_cpp",
+            target.path().string(),
+            "--set",
+            "project_name=Reapply Delete Downgrade App",
+            "--set",
+            "name_slug=reapply-delete-downgrade-app",
+            "--set",
+            "namespace=reapply_delete_downgrade_ns",
+            "--set",
+            "include_ci=false",
+            "--set",
+            "author=Reapply Delete Downgrade Tester",
+            "--reapply",
+        }));
+        REQUIRE(false);
+    } catch (const tempify::ReapplyBlockedError &error) {
+        REQUIRE(std::string(error.what()).find("version downgrade") != std::string::npos);
+    }
+
+    REQUIRE_EQ(read_text_file(target.path() / "old-managed.txt"), stale_content);
+}
+
+TEST_CASE(TempifyApp_diff_only_leaves_stale_managed_file_on_disk) {
+    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-app-reapply-delete-diff-only-target");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-reapply-delete-diff-only-data-home");
+    tempify::TempifyApp app;
+    REQUIRE_EQ(app.run({
+                   "basic_cpp",
+                   target.path().string(),
+                   "--set",
+                   "project_name=Reapply Delete Diff App",
+                   "--set",
+                   "name_slug=reapply-delete-diff-app",
+                   "--set",
+                   "namespace=reapply_delete_diff_ns",
+                   "--set",
+                   "include_ci=false",
+                   "--set",
+                   "author=Reapply Delete Diff Tester",
+               }),
+               0);
+
+    tempify::test_support::inject_stale_managed_file(target.path(), "old-managed.txt", "removed-by-template-update\n");
+    const std::string stale_content = read_text_file(target.path() / "old-managed.txt");
+
+    ScopedStdoutCapture capture;
+    REQUIRE_EQ(app.run({
+                   "basic_cpp",
+                   target.path().string(),
+                   "--set",
+                   "project_name=Reapply Delete Diff App",
+                   "--set",
+                   "name_slug=reapply-delete-diff-app",
+                   "--set",
+                   "namespace=reapply_delete_diff_ns",
+                   "--set",
+                   "include_ci=false",
+                   "--set",
+                   "author=Reapply Delete Diff Tester",
+                   "--diff",
+               }),
+               0);
+
+    const std::string output = capture.str();
+    REQUIRE(output.find("delete  old-managed.txt") != std::string::npos);
+    REQUIRE(output.find("Delete: 1") != std::string::npos);
+    REQUIRE_EQ(read_text_file(target.path() / "old-managed.txt"), stale_content);
+}
+
+TEST_CASE(TempifyApp_reapply_json_blocks_delete_review_when_lock_has_no_baseline_hash) {
+    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-app-reapply-delete-json-review-target");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() /
+                                    "tempify-app-reapply-delete-json-review-data-home");
+    tempify::TempifyApp app;
+    REQUIRE_EQ(app.run({
+                   "basic_cpp",
+                   target.path().string(),
+                   "--set",
+                   "project_name=Reapply Delete Json Review App",
+                   "--set",
+                   "name_slug=reapply-delete-json-review-app",
+                   "--set",
+                   "namespace=reapply_delete_json_review_ns",
+                   "--set",
+                   "include_ci=false",
+                   "--set",
+                   "author=Reapply Delete Json Review Tester",
+               }),
+               0);
+
+    tempify::test_support::inject_stale_managed_file_without_hash(target.path(), "old-managed.txt",
+                                                                  "removed-by-template-update\n");
+
+    const std::filesystem::path stderr_file =
+        std::filesystem::temp_directory_path() / "tempify-app-reapply-delete-json-review-stderr.txt";
+    std::filesystem::remove(stderr_file);
+    const int exit_code = run_tempify_and_capture_stderr(
+        {
+            "basic_cpp",
+            target.path().string(),
+            "--set",
+            "project_name=Reapply Delete Json Review App",
+            "--set",
+            "name_slug=reapply-delete-json-review-app",
+            "--set",
+            "namespace=reapply_delete_json_review_ns",
+            "--set",
+            "include_ci=false",
+            "--set",
+            "author=Reapply Delete Json Review Tester",
+            "--reapply",
+            "--json",
+        },
+        stderr_file);
+
+    REQUIRE(exit_code != 0);
+    const std::string error_output = read_text_file(stderr_file);
+    REQUIRE(error_output.find("\"code\": \"REAPPLY_BLOCKED\"") != std::string::npos);
+    REQUIRE(error_output.find("old-managed.txt") != std::string::npos);
+    REQUIRE(error_output.find("\"review\": [") != std::string::npos);
+    REQUIRE(std::filesystem::is_regular_file(target.path() / "old-managed.txt"));
+    std::filesystem::remove(stderr_file);
+}
+
+TEST_CASE(TempifyApp_reapply_report_json_shows_delete_without_removing_file) {
+    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-app-reapply-delete-report-json-target");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() /
+                                    "tempify-app-reapply-delete-report-json-data-home");
+    tempify::TempifyApp app;
+    REQUIRE_EQ(app.run({
+                   "basic_cpp",
+                   target.path().string(),
+                   "--set",
+                   "project_name=Reapply Delete Report Json App",
+                   "--set",
+                   "name_slug=reapply-delete-report-json-app",
+                   "--set",
+                   "namespace=reapply_delete_report_json_ns",
+                   "--set",
+                   "include_ci=false",
+                   "--set",
+                   "author=Reapply Delete Report Json Tester",
+               }),
+               0);
+
+    tempify::test_support::inject_stale_managed_file(target.path(), "old-managed.txt", "removed-by-template-update\n");
+    const std::string stale_content = read_text_file(target.path() / "old-managed.txt");
+
+    ScopedStdoutCapture capture;
+    REQUIRE_EQ(app.run({
+                   "basic_cpp",
+                   target.path().string(),
+                   "--set",
+                   "project_name=Reapply Delete Report Json App",
+                   "--set",
+                   "name_slug=reapply-delete-report-json-app",
+                   "--set",
+                   "namespace=reapply_delete_report_json_ns",
+                   "--set",
+                   "include_ci=false",
+                   "--set",
+                   "author=Reapply Delete Report Json Tester",
+                   "--reapply",
+                   "--report",
+                   "--json",
+               }),
+               0);
+
+    const std::string output = capture.str();
+    REQUIRE(output.find("\"reapply_action\": \"delete\"") != std::string::npos);
+    REQUIRE(output.find("old-managed.txt") != std::string::npos);
+    REQUIRE(output.find("\"applied\": {") == std::string::npos);
+    REQUIRE_EQ(read_text_file(target.path() / "old-managed.txt"), stale_content);
+}
+
