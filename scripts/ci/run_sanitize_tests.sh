@@ -44,8 +44,12 @@ case "$SANITIZER_KIND" in
         unset ASAN_OPTIONS UBSAN_OPTIONS TSAN_OPTIONS
         export MSAN_OPTIONS="${MSAN_OPTIONS:-halt_on_error=1:print_stats=1}"
         export TEMPIFY_MSAN_LIBCXX_PREFIX="${TEMPIFY_MSAN_LIBCXX_PREFIX:-${XDG_CACHE_HOME:-$HOME/.cache}/tempify-msan-libcxx}"
-        chmod +x "$ROOT/scripts/ci/bootstrap_msan_libcxx.sh"
+        chmod +x "$ROOT/scripts/ci/bootstrap_msan_libcxx.sh" "$ROOT/scripts/ci/bootstrap_vcpkg_deps.sh"
         "$ROOT/scripts/ci/bootstrap_msan_libcxx.sh"
+        rm -rf "$ROOT/build-cmake/.vcpkg-msan"
+        "$ROOT/scripts/ci/bootstrap_vcpkg_deps.sh" msan
+        # shellcheck disable=SC1091
+        source "$ROOT/build-cmake/.vcpkg-msan.env"
         ;;
     *)
         usage >&2
@@ -55,7 +59,13 @@ esac
 
 CMAKE_EXTRA_ARGS=("$@")
 if [[ "$SANITIZER_KIND" == "msan" ]]; then
-    CMAKE_EXTRA_ARGS=(-DTEMPIFY_MSAN_LIBCXX_PREFIX="$TEMPIFY_MSAN_LIBCXX_PREFIX" "$@")
+    CMAKE_EXTRA_ARGS=(
+        -DTEMPIFY_MSAN_LIBCXX_PREFIX="$TEMPIFY_MSAN_LIBCXX_PREFIX"
+        -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+        -DVCPKG_TARGET_TRIPLET=x64-linux-msan
+        -DVCPKG_OVERLAY_TRIPLETS="$ROOT/cmake/vcpkg/triplets"
+        "$@"
+    )
 fi
 
 if [[ "$SANITIZER_KIND" == "msan" ]] || [[ ! -f "$BUILD_DIR/CMakeCache.txt" ]]; then

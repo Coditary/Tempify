@@ -79,7 +79,7 @@ list(FILTER TEMPIFY_SOURCES EXCLUDE REGEX ".*/main\\.cpp$")
 
 add_library(tempify_core STATIC ${TEMPIFY_SOURCES})
 target_include_directories(tempify_core PUBLIC src/main/include)
-target_link_libraries(tempify_core PUBLIC prebyte_core PRIVATE CLI11::CLI11)
+target_link_libraries(tempify_core PUBLIC prebyte_core CLI11::CLI11)
 
 add_executable(tempify src/main/cpp/main.cpp)
 target_link_libraries(tempify PRIVATE tempify_core)
@@ -98,6 +98,23 @@ endif()
 install(TARGETS tempify RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES README.md LICENSE DESTINATION ${CMAKE_INSTALL_DATADIR}/tempify)
 
+if(TEMPIFY_MSAN_LIBCXX_PREFIX AND EXISTS "${TEMPIFY_MSAN_LIBCXX_PREFIX}/lib/libc++.so")
+    function(tempify_apply_msan_libcxx target)
+        if(NOT TARGET ${target})
+            return()
+        endif()
+        target_link_directories(${target} PRIVATE "${TEMPIFY_MSAN_LIBCXX_PREFIX}/lib")
+        target_link_options(${target} PRIVATE
+            "LINKER:-rpath,${TEMPIFY_MSAN_LIBCXX_PREFIX}/lib"
+            -lc++
+            -lc++abi
+        )
+    endfunction()
+
+    tempify_apply_msan_libcxx(tempify_core)
+    tempify_apply_msan_libcxx(tempify)
+endif()
+
 if(BUILD_TESTING)
     file(GLOB TEMPIFY_TEST_SOURCES CONFIGURE_DEPENDS tests/tempify/*.cpp)
     set(TEMPIFY_TEST_ENVIRONMENT
@@ -112,6 +129,10 @@ if(BUILD_TESTING)
     target_compile_definitions(tempify_tests PRIVATE TEMPIFY_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
     target_link_libraries(tempify_tests PRIVATE tempify_core)
     add_dependencies(tempify_tests tempify)
+
+    if(TEMPIFY_MSAN_LIBCXX_PREFIX AND EXISTS "${TEMPIFY_MSAN_LIBCXX_PREFIX}/lib/libc++.so")
+        tempify_apply_msan_libcxx(tempify_tests)
+    endif()
 
     if(TEMPIFY_ENABLE_COVERAGE)
         if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")

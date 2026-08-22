@@ -68,7 +68,7 @@ tsan:
 
 msan:
 	chmod +x scripts/ci/run_sanitize_tests.sh
-	./scripts/ci/run_sanitize_tests.sh msan $(CMAKE_VCPKG_ARGS)
+	./scripts/ci/run_sanitize_tests.sh msan
 
 fuzz:
 	chmod +x scripts/ci/run_fuzzers.sh
