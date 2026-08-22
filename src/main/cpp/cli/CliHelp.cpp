@@ -365,6 +365,15 @@ std::string format_render_help(const CliRequest &request) {
                        "tempify path/to/template out-dir --accept-hooks ask",
                        "tempify reapply basic_cpp existing-dir --json",
                    });
+    const char *reapply_json_note =
+        "`--reapply --json` outputs machine-readable origin metadata, update kind, applied, kept, and "
+        "blocked details.";
+    const char *reapply_upgrade_policy_note =
+        "`--reapply` allows patch/prerelease upgrades, but major upgrades, pre-1.0 minor upgrades, downgrades, "
+        "or unknown version transitions require review.";
+    const char *reapply_lockfile_note =
+        "`--reapply` requires existing .tempify-lock.json, applies only ready create/update/delete actions, and "
+        "does not run hooks.";
     append_section(
         stream, "Notes",
         {
@@ -376,11 +385,11 @@ std::string format_render_help(const CliRequest &request) {
             "`--diff` text output includes update recommendation based on origin lock and version transition.",
             "`--diff --json` outputs machine-readable status counts, origin metadata, and update kind.",
             "`--reapply --report` is report-only alias for reapply planning and does not write files.",
-            "`--reapply --json` outputs machine-readable origin metadata, update kind, applied, kept, and blocked details.",
+            reapply_json_note,
             "`tempify reapply <template-id> <target>` is alias for `tempify <template-id> <target> --reapply`.",
             "`--reapply` blocks cross-template .tempify-lock.json reuse and requires matching origin template id.",
-            "`--reapply` allows patch/prerelease upgrades, but major upgrades, pre-1.0 minor upgrades, downgrades, or unknown version transitions require review.",
-            "`--reapply` requires existing .tempify-lock.json, applies only ready create/update/delete actions, and does not run hooks.",
+            reapply_upgrade_policy_note,
+            reapply_lockfile_note,
         });
     return stream.str();
 }

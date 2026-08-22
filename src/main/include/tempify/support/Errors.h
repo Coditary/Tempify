@@ -34,9 +34,8 @@ class ReapplyBlockedError : public TempifyError {
                         std::vector<std::string> review_paths,
                         std::optional<ReapplyOriginMismatchInfo> origin_mismatch = std::nullopt,
                         std::optional<ReapplyVersionTransitionInfo> version_transition = std::nullopt)
-        : TempifyError(message), conflict_paths_(std::move(conflict_paths)),
-          review_paths_(std::move(review_paths)), origin_mismatch_(std::move(origin_mismatch)),
-          version_transition_(std::move(version_transition)) {}
+        : TempifyError(message), conflict_paths_(std::move(conflict_paths)), review_paths_(std::move(review_paths)),
+          origin_mismatch_(std::move(origin_mismatch)), version_transition_(std::move(version_transition)) {}
 
     const std::vector<std::string> &conflict_paths() const noexcept {
         return conflict_paths_;

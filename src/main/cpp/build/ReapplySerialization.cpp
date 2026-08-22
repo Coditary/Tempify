@@ -361,8 +361,8 @@ ReapplyBlockedError build_reapply_blocked_error(const BuildDiffReport &report) {
         stream << "status unavailable";
     }
     stream << ". Run `tempify <template-id> <target> --diff` to inspect.";
-    return ReapplyBlockedError(stream.str(), groups.conflict_paths, std::move(review_paths),
-                               std::move(origin_mismatch), std::move(version_transition));
+    return ReapplyBlockedError(stream.str(), groups.conflict_paths, std::move(review_paths), std::move(origin_mismatch),
+                               std::move(version_transition));
 }
 
 std::string format_reapply_blocked_error_json(const ReapplyBlockedError &error) {
