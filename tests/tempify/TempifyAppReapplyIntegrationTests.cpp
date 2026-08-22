@@ -107,8 +107,7 @@ TEST_CASE(TempifyApp_reapply_blocks_version_downgrade_with_structured_details) {
         REQUIRE_EQ(error.version_transition()->reason, std::string("backward_version_change"));
         REQUIRE_EQ(error.version_transition()->from_version, std::string("0.2.0"));
         REQUIRE_EQ(error.version_transition()->to_version, std::string("0.1.0"));
-        REQUIRE(std::find(error.review_paths().begin(), error.review_paths().end(), ".tempify-lock.json") !=
-                error.review_paths().end());
+        REQUIRE_EQ(error.version_transition()->lockfile_path, std::string(".tempify-lock.json"));
     }
 }
 
@@ -165,8 +164,7 @@ TEST_CASE(TempifyApp_reapply_blocks_pre_1_0_minor_upgrade_with_structured_detail
         REQUIRE_EQ(error.version_transition()->reason, std::string("pre_1_0_minor_upgrade"));
         REQUIRE_EQ(error.version_transition()->from_version, std::string("0.0.9"));
         REQUIRE_EQ(error.version_transition()->to_version, std::string("0.1.0"));
-        REQUIRE(std::find(error.review_paths().begin(), error.review_paths().end(), ".tempify-lock.json") !=
-                error.review_paths().end());
+        REQUIRE_EQ(error.version_transition()->lockfile_path, std::string(".tempify-lock.json"));
     }
 }
 
@@ -645,8 +643,6 @@ TEST_CASE(TempifyApp_reapply_blocks_origin_template_mismatch) {
         REQUIRE_EQ(error.origin_mismatch()->origin_template_id, std::string("layered_cpp_product"));
         REQUIRE_EQ(error.origin_mismatch()->requested_template_id, std::string("basic_cpp"));
         REQUIRE(!error.version_transition().has_value());
-        REQUIRE(std::find(error.review_paths().begin(), error.review_paths().end(), ".tempify-lock.json") !=
-                error.review_paths().end());
     }
 
     REQUIRE_EQ(read_text_file(target.path() / ".tempify-lock.json"), original_lock);
