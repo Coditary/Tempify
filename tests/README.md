@@ -34,8 +34,8 @@ Targets:
 | `fuzz_generation_lock` | `load_generation_lock()` + `content_fingerprint_hex()` |
 | `fuzz_answer_file` | `load_answer_file()` (strict + non-strict) |
 
-Seeds live under `tests/fault_tolerance/fuzz/seeds/`. Generated corpora are written to
-`tests/fault_tolerance/fuzz/corpus/` (gitignored). Replay saved crash inputs from
+Seeds live under `tests/fault_tolerance/fuzz/seeds/<target>/` (checked-in starting inputs).
+Generated corpora are written to `tests/fault_tolerance/fuzz/corpus/` (gitignored). Replay saved crash inputs from
 `tests/fault_tolerance/fuzz/regression/<target>/` via `make fuzz-regression`.
 
 Manual workflow:

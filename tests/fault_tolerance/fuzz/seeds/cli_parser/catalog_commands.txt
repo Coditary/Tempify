@@ -1,0 +1,8 @@
+list --json
+info basic_cpp
+doctor
+refresh
+validate basic_cpp
+inspect basic_cpp --json
+lint basic_cpp
+test basic_cpp --fixture default_no_ci

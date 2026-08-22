@@ -1,0 +1,11 @@
+{
+  "tempify_version": "0.1.0",
+  "build_root": "/tmp/out",
+  "generated_at": "2026-01-01T00:00:00Z",
+  "existing_path_behavior": "error",
+  "hook_acceptance": "yes",
+  "hooks_disabled": true,
+  "managed_files": [],
+  "managed_file_hashes": {},
+  "values": {}
+}

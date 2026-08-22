@@ -1,0 +1,7 @@
+{
+  "render": {
+    "accept_hooks": "no",
+    "hook_timeout_ms": 0,
+    "existing_path_behavior": "skip"
+  }
+}

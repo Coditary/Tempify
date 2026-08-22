@@ -1,0 +1,1 @@
+basic_cpp my-app --set project_name=My App --set name_slug=my-app --set namespace=app_ns --set include_ci=false --set author=Tester

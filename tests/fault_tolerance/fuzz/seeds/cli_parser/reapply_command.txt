@@ -1,0 +1,1 @@
+reapply basic_cpp my-app --set project_name=Reapply --set name_slug=reapply-app --set namespace=reapply_ns --set include_ci=false --set author=Tester

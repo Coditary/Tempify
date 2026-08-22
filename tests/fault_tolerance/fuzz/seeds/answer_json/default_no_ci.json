@@ -1,0 +1,6 @@
+{
+  "project_name": "Snapshot App",
+  "project_slug": "snapshot-app",
+  "namespace": "snapshot_ns",
+  "include_ci": false
+}

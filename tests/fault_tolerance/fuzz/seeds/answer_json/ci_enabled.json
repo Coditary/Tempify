@@ -1,0 +1,8 @@
+{
+  "project_name": "CI Snapshot App",
+  "project_slug": "ci-snapshot-app",
+  "namespace": "ci_ns",
+  "include_ci": true,
+  "ci_provider": "github",
+  "docs_url": "https://docs.example"
+}
