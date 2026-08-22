@@ -116,17 +116,32 @@ if(TEMPIFY_MSAN_LIBCXX_PREFIX AND EXISTS "${TEMPIFY_MSAN_LIBCXX_PREFIX}/lib/libc
 endif()
 
 if(BUILD_TESTING)
-    file(GLOB TEMPIFY_TEST_SOURCES CONFIGURE_DEPENDS tests/tempify/*.cpp)
+    set(TEMPIFY_TEST_GLOBS
+        tests/tempify/*.cpp
+        tests/correctness/e2e/*.cpp
+        tests/security/e2e/*.cpp
+        tests/portability/cli/*.cpp
+        tests/concurrency/e2e/*.cpp
+    )
+    set(TEMPIFY_TEST_SOURCES)
+    foreach(TEMPIFY_TEST_GLOB IN LISTS TEMPIFY_TEST_GLOBS)
+        file(GLOB TEMPIFY_TEST_GLOB_SOURCES CONFIGURE_DEPENDS ${TEMPIFY_TEST_GLOB})
+        list(APPEND TEMPIFY_TEST_SOURCES ${TEMPIFY_TEST_GLOB_SOURCES})
+    endforeach()
     set(TEMPIFY_TEST_ENVIRONMENT
         "TEMPIFY_TEST_BINARY=$<TARGET_FILE:tempify>;XDG_DATA_HOME=${CMAKE_SOURCE_DIR}/tests/test_workspace/.xdg-data;XDG_CONFIG_HOME=${CMAKE_SOURCE_DIR}/tests/test_workspace/.xdg-config")
 
     add_executable(tempify_tests
         tests/support/TestHarness.cpp
         tests/support/TestMain.cpp
+        tests/support/CliProcess.cpp
         ${TEMPIFY_TEST_SOURCES}
     )
     target_include_directories(tempify_tests PRIVATE tests/support src/main/include)
-    target_compile_definitions(tempify_tests PRIVATE TEMPIFY_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+    target_compile_definitions(tempify_tests PRIVATE
+        TEMPIFY_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+        TEMPIFY_CLI_BINARY="$<TARGET_FILE:tempify>"
+    )
     target_link_libraries(tempify_tests PRIVATE tempify_core)
     add_dependencies(tempify_tests tempify)
 
