@@ -40,7 +40,7 @@ TEST_CASE(LuaEngine_evaluate_default_condition_and_validate_for_questions) {
 
     const auto slug_value = lua_engine.evaluate_default(slug, values);
     REQUIRE(slug_value.has_value());
-    REQUIRE_EQ(*slug_value, std::string("stone-app"));
+    REQUIRE_EQ(slug_value.value(), std::string("stone-app"));
 
     REQUIRE(lua_engine.evaluate_condition(provider, values));
     values["include_ci"] = "false";

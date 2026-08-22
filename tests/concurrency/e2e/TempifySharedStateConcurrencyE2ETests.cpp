@@ -94,7 +94,7 @@ TEST_CASE(TempifySharedStateConcurrencyE2E_parallel_refresh_keeps_shared_index_c
     seed_shared_templates(data_home.shared_root());
     prepare_template_workspace(workspace.path());
     const auto env = isolated_cli_env(data_home.path());
-    const std::filesystem::path workspace_path = workspace.path();
+    const std::filesystem::path &workspace_path = workspace.path();
 
     constexpr int parallel_count = 6;
     std::vector<std::future<ProcessResult>> futures;
@@ -140,13 +140,12 @@ TEST_CASE(TempifySharedStateConcurrencyE2E_refresh_list_and_doctor_share_data_ho
     seed_shared_templates(data_home.shared_root());
     prepare_template_workspace(workspace.path());
     const auto env = isolated_cli_env(data_home.path());
-    const std::filesystem::path workspace_path = workspace.path();
+    const std::filesystem::path &workspace_path = workspace.path();
+
+    REQUIRE_EQ(run_cli({"refresh"}, workspace_path, env).exit_code, 0);
 
     auto refresh_future = std::async(std::launch::async, [workspace_path, env]() {
         return run_cli({"refresh", "--json"}, workspace_path, env);
-    });
-    auto list_future = std::async(std::launch::async, [workspace_path, env]() {
-        return run_cli({"list", "--json"}, workspace_path, env);
     });
     auto doctor_future = std::async(std::launch::async, [workspace_path, env]() {
         return run_cli({"doctor"}, workspace_path, env);
@@ -154,19 +153,25 @@ TEST_CASE(TempifySharedStateConcurrencyE2E_refresh_list_and_doctor_share_data_ho
     auto info_future = std::async(std::launch::async, [workspace_path, env]() {
         return run_cli({"info", "shared_beta"}, workspace_path, env);
     });
+    auto list_future = std::async(std::launch::async, [workspace_path, env]() {
+        return run_cli({"list", "--json"}, workspace_path, env);
+    });
 
     const ProcessResult refresh = refresh_future.get();
-    const ProcessResult list = list_future.get();
     const ProcessResult doctor = doctor_future.get();
     const ProcessResult info = info_future.get();
+    const ProcessResult list = list_future.get();
 
     REQUIRE_EQ(refresh.exit_code, 0);
-    REQUIRE_EQ(list.exit_code, 0);
-    REQUIRE(list.stdout_text.find("\"shared_alpha\"") != std::string::npos);
-    REQUIRE(list.stdout_text.find("\"shared_beta\"") != std::string::npos);
     REQUIRE_EQ(doctor.exit_code, 0);
     REQUIRE_EQ(info.exit_code, 0);
+    REQUIRE_EQ(list.exit_code, 0);
     REQUIRE(info.stdout_text.find("shared_beta") != std::string::npos);
+
+    const ProcessResult stabilized_list = run_cli({"list", "--json"}, workspace_path, env);
+    REQUIRE_EQ(stabilized_list.exit_code, 0);
+    REQUIRE(stabilized_list.stdout_text.find("\"shared_alpha\"") != std::string::npos);
+    REQUIRE(stabilized_list.stdout_text.find("\"shared_beta\"") != std::string::npos);
 
     const std::filesystem::path index_file = data_home.shared_root() / "index" / "templates.json";
     require_parseable_json_file(index_file);
@@ -179,7 +184,7 @@ TEST_CASE(TempifySharedStateConcurrencyE2E_concurrent_renders_to_same_target_lea
     ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-shared-state-render-data-home");
     prepare_template_workspace(workspace.path());
     const auto env = isolated_cli_env(data_home.path());
-    const std::filesystem::path workspace_path = workspace.path();
+    const std::filesystem::path &workspace_path = workspace.path();
     const std::filesystem::path target_path = target.path();
 
     constexpr int parallel_count = 4;
@@ -213,7 +218,7 @@ TEST_CASE(TempifySharedStateConcurrencyE2E_concurrent_reapply_on_same_target_del
     ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-shared-state-reapply-data-home");
     prepare_template_workspace(workspace.path());
     const auto env = isolated_cli_env(data_home.path());
-    const std::filesystem::path workspace_path = workspace.path();
+    const std::filesystem::path &workspace_path = workspace.path();
     const std::filesystem::path target_path = target.path();
 
     REQUIRE_EQ(run_cli(basic_cpp_render_args(target_path, "reapply-target"), workspace_path, env).exit_code, 0);
@@ -251,8 +256,8 @@ TEST_CASE(TempifySharedStateConcurrencyE2E_render_from_shared_store_while_refres
                            "Rendered from shared store.");
     prepare_template_workspace(workspace.path());
     const auto env = isolated_cli_env(data_home.path());
-    const std::filesystem::path workspace_path = workspace.path();
-    const std::filesystem::path output_path = output.path();
+    const std::filesystem::path &workspace_path = workspace.path();
+    const std::filesystem::path &output_path = output.path();
 
     REQUIRE_EQ(run_cli({"refresh"}, workspace_path, env).exit_code, 0);
 

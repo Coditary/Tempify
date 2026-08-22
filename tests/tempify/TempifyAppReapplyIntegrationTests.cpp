@@ -8,7 +8,7 @@
 
 namespace {
 
-std::string shell_quote(std::string value) {
+std::string shell_quote(const std::string &value) {
     std::string quoted = "\"";
     for (const char ch : value) {
         if (ch == '"') {

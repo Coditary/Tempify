@@ -55,7 +55,8 @@ TestRegistrar::TestRegistrar(std::string name, TestFunction function) {
 
 AssertionFailure::AssertionFailure(const std::string &message) : std::runtime_error(message) {}
 
-ScopedEnvironmentVariable::ScopedEnvironmentVariable(std::string name, std::string value) : name_(std::move(name)) {
+ScopedEnvironmentVariable::ScopedEnvironmentVariable(std::string name, const std::string &value)
+    : name_(std::move(name)) {
     if (const char *current = std::getenv(name_.c_str())) {
         previous_value_ = current;
     }

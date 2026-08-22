@@ -78,7 +78,7 @@ TEST_CASE(TempifyConcurrencyE2E_parallel_list_and_inspect_do_not_interfere) {
     ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-concurrency-catalog-data-home");
     prepare_template_workspace(workspace.path());
     const auto env = isolated_cli_env(data_home.path());
-    const std::filesystem::path workspace_path = workspace.path();
+    const std::filesystem::path &workspace_path = workspace.path();
 
     auto list_future = std::async(std::launch::async, [workspace_path, env]() {
         return run_cli({"list"}, workspace_path, env);
@@ -108,7 +108,7 @@ TEST_CASE(TempifyConcurrencyE2E_parallel_renders_to_same_target_without_overwrit
     ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-concurrency-same-target-data-home");
     prepare_template_workspace(workspace.path());
     const auto env = isolated_cli_env(data_home.path());
-    const std::filesystem::path workspace_path = workspace.path();
+    const std::filesystem::path &workspace_path = workspace.path();
     const std::filesystem::path target_path = target.path();
 
     constexpr int parallel_count = 4;

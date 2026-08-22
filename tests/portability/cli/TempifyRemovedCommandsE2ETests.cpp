@@ -32,7 +32,7 @@ TEST_CASE(TempifyRemovedCommandsE2E_subprocess_reports_migration_errors) {
     ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-removed-commands-data-home");
     prepare_template_workspace(workspace.path());
     const auto env = isolated_cli_env(data_home.path());
-    const std::filesystem::path workspace_path = workspace.path();
+    const std::filesystem::path &workspace_path = workspace.path();
 
     require_removed_command_subprocess({"template", "list"}, "template", "tempify list", workspace_path, env);
     require_removed_command_subprocess({"prebyte", "render"}, "prebyte", "tempify -p", workspace_path, env);

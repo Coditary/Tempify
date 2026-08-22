@@ -626,9 +626,7 @@ BuildReapplySummary build_reapply_summary(const BuildDiffReport &report) {
 
     if (!report.origin.detected) {
         summary.status = BuildReapplyStatus::Unavailable;
-    } else if (report.update_policy.action == BuildUpdatePolicyAction::Review) {
-        summary.status = BuildReapplyStatus::Review;
-    } else if (summary.review_count > 0) {
+    } else if (report.update_policy.action == BuildUpdatePolicyAction::Review || summary.review_count > 0) {
         summary.status = BuildReapplyStatus::Review;
     } else if (summary.conflict_count > 0) {
         summary.status = BuildReapplyStatus::Conflict;

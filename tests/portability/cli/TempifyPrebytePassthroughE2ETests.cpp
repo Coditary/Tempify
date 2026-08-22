@@ -20,7 +20,7 @@ TEST_CASE(TempifyPrebytePassthroughE2E_short_and_long_aliases_run_embedded_preby
     ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-prebyte-passthrough-data-home");
     prepare_template_workspace(workspace.path());
     const auto env = isolated_cli_env(data_home.path());
-    const std::filesystem::path workspace_path = workspace.path();
+    const std::filesystem::path &workspace_path = workspace.path();
 
     const ProcessResult short_version = run_cli({"-p", "--version"}, workspace_path, env);
     REQUIRE_EQ(short_version.exit_code, 0);
@@ -40,7 +40,7 @@ TEST_CASE(TempifyPrebytePassthroughE2E_process_help_matches_tempify_wrapper) {
     ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-prebyte-help-data-home");
     prepare_template_workspace(workspace.path());
     const auto env = isolated_cli_env(data_home.path());
-    const std::filesystem::path workspace_path = workspace.path();
+    const std::filesystem::path &workspace_path = workspace.path();
 
     const ProcessResult short_help = run_cli({"-p", "-h"}, workspace_path, env);
     REQUIRE_EQ(short_help.exit_code, 0);
@@ -56,7 +56,7 @@ TEST_CASE(TempifyPrebytePassthroughE2E_invalid_prebyte_args_fail_in_subprocess) 
     ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-prebyte-invalid-data-home");
     prepare_template_workspace(workspace.path());
     const auto env = isolated_cli_env(data_home.path());
-    const std::filesystem::path workspace_path = workspace.path();
+    const std::filesystem::path &workspace_path = workspace.path();
 
     const ProcessResult short_form =
         run_cli({"-p", "definitely-not-a-prebyte-input-file"}, workspace_path, env);

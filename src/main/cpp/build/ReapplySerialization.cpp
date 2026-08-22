@@ -361,7 +361,7 @@ ReapplyBlockedError build_reapply_blocked_error(const BuildDiffReport &report) {
         stream << "status unavailable";
     }
     stream << ". Run `tempify <template-id> <target> --diff` to inspect.";
-    return ReapplyBlockedError(stream.str(), std::move(groups.conflict_paths), std::move(groups.review_paths),
+    return ReapplyBlockedError(stream.str(), groups.conflict_paths, std::move(review_paths),
                                std::move(origin_mismatch), std::move(version_transition));
 }
 
@@ -378,7 +378,7 @@ std::string format_reapply_blocked_error_json(const ReapplyBlockedError &error) 
     if (!error.origin_mismatch().has_value()) {
         stream << "null,\n";
     } else {
-        const auto &mismatch = *error.origin_mismatch();
+        const auto &mismatch = error.origin_mismatch().value();
         stream << "{\n";
         stream << "      \"lockfile\": \"" << json_escape(mismatch.lockfile_path) << "\",\n";
         stream << "      \"origin_template\": {\n";
@@ -395,7 +395,7 @@ std::string format_reapply_blocked_error_json(const ReapplyBlockedError &error) 
     if (!error.version_transition().has_value()) {
         stream << "null\n";
     } else {
-        const auto &transition = *error.version_transition();
+        const auto &transition = error.version_transition().value();
         stream << "{\n";
         stream << "      \"lockfile\": \"" << json_escape(transition.lockfile_path) << "\",\n";
         stream << "      \"kind\": \"" << json_escape(transition.kind) << "\",\n";

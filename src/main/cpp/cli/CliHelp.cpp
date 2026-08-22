@@ -376,14 +376,11 @@ std::string format_render_help(const CliRequest &request) {
             "`--diff` text output includes update recommendation based on origin lock and version transition.",
             "`--diff --json` outputs machine-readable status counts, origin metadata, and update kind.",
             "`--reapply --report` is report-only alias for reapply planning and does not write files.",
-            "`--reapply --json` outputs machine-readable origin metadata, update kind, applied, kept, and blocked "
-            "details.",
+            "`--reapply --json` outputs machine-readable origin metadata, update kind, applied, kept, and blocked details.",
             "`tempify reapply <template-id> <target>` is alias for `tempify <template-id> <target> --reapply`.",
             "`--reapply` blocks cross-template .tempify-lock.json reuse and requires matching origin template id.",
-            "`--reapply` allows patch/prerelease upgrades, but major upgrades, pre-1.0 minor upgrades, downgrades, or "
-            "unknown version transitions require review.",
-            "`--reapply` requires existing .tempify-lock.json, applies only ready create/update/delete actions, and "
-            "does not run hooks.",
+            "`--reapply` allows patch/prerelease upgrades, but major upgrades, pre-1.0 minor upgrades, downgrades, or unknown version transitions require review.",
+            "`--reapply` requires existing .tempify-lock.json, applies only ready create/update/delete actions, and does not run hooks.",
         });
     return stream.str();
 }

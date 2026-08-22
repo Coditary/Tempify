@@ -85,7 +85,7 @@ void assert_throws(Function &&function, const char *expr, const char *file, int 
 
 #define TEST_CASE(name)                                                                                                \
     static void name();                                                                                                \
-    static ::prebyte::test::TestRegistrar name##_registrar(#name, &name);                                              \
+    static ::prebyte::test::TestRegistrar name##_registrar(#name, &(name));                                            \
     static void name()
 
 #define REQUIRE(expr) ::prebyte::test::assert_true((expr), #expr, __FILE__, __LINE__)
