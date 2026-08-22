@@ -1,0 +1,7 @@
+---
+Checks: '-*'
+WarningsAsErrors: '*'
+HeaderFilterRegex: '(src/main/(cpp|include)|tests/(support|tempify))/.*'
+FormatStyle: none
+ExtraArgsBefore:
+  - '-std=c++23'
