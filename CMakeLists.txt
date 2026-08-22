@@ -11,6 +11,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(TEMPIFY_ENABLE_COVERAGE "Enable GCC/GCov coverage instrumentation" OFF)
+option(TEMPIFY_BUILD_FUZZERS "Build Tempify libFuzzer targets" OFF)
+set(TEMPIFY_MSAN_LIBCXX_PREFIX ""
+    CACHE PATH "Install prefix of a MemorySanitizer-instrumented libc++ (required for reliable MSan runs)")
+
+if(TEMPIFY_MSAN_LIBCXX_PREFIX)
+    set(PREBYTE_MSAN_LIBCXX_PREFIX "${TEMPIFY_MSAN_LIBCXX_PREFIX}" CACHE PATH "MSan libc++ prefix" FORCE)
+endif()
 
 if(MSVC AND NOT DEFINED CMAKE_MSVC_RUNTIME_LIBRARY)
     if(DEFINED VCPKG_TARGET_TRIPLET AND VCPKG_TARGET_TRIPLET MATCHES "windows-static")
@@ -160,4 +167,65 @@ if(BUILD_TESTING)
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         ENVIRONMENT "${TEMPIFY_TEST_ENVIRONMENT}"
     )
+endif()
+
+if(TEMPIFY_BUILD_FUZZERS)
+    if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang")
+        message(FATAL_ERROR "TEMPIFY_BUILD_FUZZERS requires Clang with libFuzzer support")
+    endif()
+
+    if(NOT PREBYTE_ENABLE_SANITIZERS)
+        message(FATAL_ERROR "TEMPIFY_BUILD_FUZZERS requires PREBYTE_ENABLE_SANITIZERS")
+    endif()
+
+    if(NOT TARGET tempify)
+        message(FATAL_ERROR "TEMPIFY_BUILD_FUZZERS requires the tempify executable target")
+    endif()
+
+    set(TEMPIFY_FUZZ_TEST_ENVIRONMENT
+        "TEMPIFY_TEST_BINARY=$<TARGET_FILE:tempify>;XDG_DATA_HOME=${CMAKE_SOURCE_DIR}/tests/test_workspace/.xdg-data;XDG_CONFIG_HOME=${CMAKE_SOURCE_DIR}/tests/test_workspace/.xdg-config")
+
+    set(TEMPIFY_FUZZ_TARGETS
+        fuzz_slugify
+        fuzz_answer_json
+        fuzz_cli_parser
+    )
+
+    set(TEMPIFY_FUZZ_SOURCES
+        tests/fault_tolerance/fuzz/SlugFuzz.cpp
+        tests/fault_tolerance/fuzz/AnswerJsonFuzz.cpp
+        tests/fault_tolerance/fuzz/CliParserFuzz.cpp
+    )
+
+    list(LENGTH TEMPIFY_FUZZ_TARGETS TEMPIFY_FUZZ_TARGET_COUNT)
+    math(EXPR TEMPIFY_FUZZ_LAST_INDEX "${TEMPIFY_FUZZ_TARGET_COUNT} - 1")
+
+    if(DEFINED ENV{TEMPIFY_FUZZ_MAX_TOTAL_TIME})
+        set(TEMPIFY_FUZZ_MAX_TOTAL_TIME "$ENV{TEMPIFY_FUZZ_MAX_TOTAL_TIME}")
+    else()
+        set(TEMPIFY_FUZZ_MAX_TOTAL_TIME 60)
+    endif()
+
+    foreach(TEMPIFY_FUZZ_INDEX RANGE ${TEMPIFY_FUZZ_LAST_INDEX})
+        list(GET TEMPIFY_FUZZ_TARGETS ${TEMPIFY_FUZZ_INDEX} TEMPIFY_FUZZ_TARGET)
+        list(GET TEMPIFY_FUZZ_SOURCES ${TEMPIFY_FUZZ_INDEX} TEMPIFY_FUZZ_SOURCE)
+
+        add_executable(${TEMPIFY_FUZZ_TARGET} ${TEMPIFY_FUZZ_SOURCE})
+        target_link_libraries(${TEMPIFY_FUZZ_TARGET} PRIVATE tempify_core)
+        target_compile_options(${TEMPIFY_FUZZ_TARGET} PRIVATE -fsanitize=fuzzer)
+        target_link_options(${TEMPIFY_FUZZ_TARGET} PRIVATE -fsanitize=fuzzer)
+
+        set(TEMPIFY_FUZZ_CORPUS "${CMAKE_SOURCE_DIR}/tests/fault_tolerance/fuzz/corpus/${TEMPIFY_FUZZ_TARGET}")
+        add_test(
+            NAME ${TEMPIFY_FUZZ_TARGET}
+            COMMAND ${TEMPIFY_FUZZ_TARGET}
+                -max_total_time=${TEMPIFY_FUZZ_MAX_TOTAL_TIME}
+                -close_fd_mask=3
+                ${TEMPIFY_FUZZ_CORPUS}
+        )
+        set_tests_properties(${TEMPIFY_FUZZ_TARGET} PROPERTIES
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            ENVIRONMENT "${TEMPIFY_FUZZ_TEST_ENVIRONMENT}"
+        )
+    endforeach()
 endif()

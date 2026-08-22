@@ -17,4 +17,5 @@
 /compile_commands.json
 /scripts/ci/__pycache__/
 /tests/test_workspace/
+/tests/fault_tolerance/fuzz/corpus/
 /build-cmake/

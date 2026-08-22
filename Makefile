@@ -1,9 +1,10 @@
-.PHONY: configure build start run test clean analyze lint security static-analysis format format-check coverage
+.PHONY: configure build start run test clean analyze lint security static-analysis format format-check coverage sanitize tsan msan fuzz fuzz-regression
 
 BUILD_DIR ?= build
 CLANG_TIDY_BUILD_DIR := build-cmake/tidy
 COVERAGE_BUILD_DIR := build-cmake/coverage
 COVERAGE_MIN_LINE ?= 85
+TEMPIFY_FUZZ_MAX_TOTAL_TIME ?= 60
 
 ifdef VCPKG_ROOT
 CMAKE_VCPKG_ARGS := -DCMAKE_TOOLCHAIN_FILE=$(VCPKG_ROOT)/scripts/buildsystems/vcpkg.cmake
@@ -56,6 +57,26 @@ coverage:
 	ctest --preset coverage
 	chmod +x scripts/ci/generate_coverage_report.sh
 	COVERAGE_MIN_LINE=$(COVERAGE_MIN_LINE) ./scripts/ci/generate_coverage_report.sh
+
+sanitize:
+	chmod +x scripts/ci/run_sanitize_tests.sh
+	./scripts/ci/run_sanitize_tests.sh asan $(CMAKE_VCPKG_ARGS)
+
+tsan:
+	chmod +x scripts/ci/run_sanitize_tests.sh
+	./scripts/ci/run_sanitize_tests.sh tsan $(CMAKE_VCPKG_ARGS)
+
+msan:
+	chmod +x scripts/ci/run_sanitize_tests.sh
+	./scripts/ci/run_sanitize_tests.sh msan $(CMAKE_VCPKG_ARGS)
+
+fuzz:
+	chmod +x scripts/ci/run_fuzzers.sh
+	TEMPIFY_FUZZ_MAX_TOTAL_TIME=$(TEMPIFY_FUZZ_MAX_TOTAL_TIME) ./scripts/ci/run_fuzzers.sh $(CMAKE_VCPKG_ARGS)
+
+fuzz-regression:
+	chmod +x scripts/ci/run_fuzz_regression.sh
+	./scripts/ci/run_fuzz_regression.sh
 
 clean:
 	rm -rf $(BUILD_DIR) build-cmake
