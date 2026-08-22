@@ -189,8 +189,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
-      CC: clang
-      CXX: clang++
+      CC: clang-18
+      CXX: clang++-18
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -198,7 +198,10 @@ jobs:
       - name: Install Linux prerequisites
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends ninja-build pkg-config zstd clang clang++
+          sudo apt-get install -y --no-install-recommends ninja-build pkg-config zstd clang-18
+          sudo ln -sf "$(command -v clang-18)" /usr/local/bin/clang
+          sudo ln -sf "$(command -v clang++-18)" /usr/local/bin/clang++
+          echo "/usr/local/bin" >> "$GITHUB_PATH"
 
       - name: Bootstrap vcpkg dependencies
         run: |
@@ -221,8 +224,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
-      CC: clang
-      CXX: clang++
+      CC: clang-18
+      CXX: clang++-18
       TEMPIFY_FUZZ_MAX_TOTAL_TIME: 30
     steps:
       - name: Checkout repository
@@ -231,7 +234,10 @@ jobs:
       - name: Install Linux prerequisites
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends ninja-build pkg-config zstd clang clang++
+          sudo apt-get install -y --no-install-recommends ninja-build pkg-config zstd clang-18
+          sudo ln -sf "$(command -v clang-18)" /usr/local/bin/clang
+          sudo ln -sf "$(command -v clang++-18)" /usr/local/bin/clang++
+          echo "/usr/local/bin" >> "$GITHUB_PATH"
 
       - name: Bootstrap vcpkg dependencies
         run: |
@@ -287,8 +293,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
-      CC: clang
-      CXX: clang++
+      CC: clang-18
+      CXX: clang++-18
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -296,7 +302,10 @@ jobs:
       - name: Install Linux prerequisites
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends ninja-build pkg-config zstd clang clang++ clang-tidy-18 clang-format-18
+          sudo apt-get install -y --no-install-recommends ninja-build pkg-config zstd clang-18 clang-tidy-18 clang-format-18
+          sudo ln -sf "$(command -v clang-18)" /usr/local/bin/clang
+          sudo ln -sf "$(command -v clang++-18)" /usr/local/bin/clang++
+          echo "/usr/local/bin" >> "$GITHUB_PATH"
 
       - name: Bootstrap vcpkg dependencies
         run: |
