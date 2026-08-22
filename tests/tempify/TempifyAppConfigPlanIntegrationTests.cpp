@@ -472,3 +472,80 @@ TEST_CASE(TempifyApp_template_env_file_supplies_defaults_during_render) {
     REQUIRE(readme.find("# From Env File") != std::string::npos);
     REQUIRE(readme.find("FROM ENV DEFAULTS") != std::string::npos);
 }
+
+TEST_CASE(TempifyApp_render_rejects_corrupt_workspace_config_file) {
+    ScopedDirectoryCleanup workspace(std::filesystem::temp_directory_path() / "tempify-app-corrupt-config-workspace");
+    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-app-corrupt-config-target");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-corrupt-config-data-home");
+    std::filesystem::create_directories(workspace.path());
+    link_test_templates_into_workspace(workspace.path());
+    std::filesystem::create_directories(workspace.path() / ".tempify");
+    write_text_file(workspace.path() / ".tempify" / "config.json", "{ broken config\n");
+
+    ScopedCurrentPath cwd(workspace.path());
+    tempify::TempifyApp app;
+
+    try {
+        static_cast<void>(app.run({
+            "basic_cpp",
+            target.path().string(),
+            "--set",
+            "project_name=Corrupt Config App",
+            "--set",
+            "name_slug=corrupt-config",
+            "--set",
+            "namespace=corrupt_config_ns",
+            "--set",
+            "include_ci=false",
+            "--set",
+            "author=Corrupt Config Tester",
+            "--non-interactive",
+            "--strict",
+        }));
+        REQUIRE(false);
+    } catch (const tempify::TempifyError &error) {
+        REQUIRE(std::string(error.what()).find("Could not parse config file") != std::string::npos);
+    }
+}
+
+TEST_CASE(TempifyApp_render_rejects_invalid_accept_hooks_value_in_config) {
+    ScopedDirectoryCleanup workspace(
+        std::filesystem::temp_directory_path() / "tempify-app-invalid-hooks-config-workspace");
+    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-app-invalid-hooks-config-target");
+    ScopedTempifyDataHome data_home(
+        std::filesystem::temp_directory_path() / "tempify-app-invalid-hooks-config-data-home");
+    ScopedTempifyConfigHome config_home(
+        std::filesystem::temp_directory_path() / "tempify-app-invalid-hooks-config-config-home");
+    std::filesystem::create_directories(workspace.path());
+    link_test_templates_into_workspace(workspace.path());
+    write_text_file(config_home.path() / "tempify" / "config.json", "{\n"
+                                                                    "  \"render\": {\n"
+                                                                    "    \"accept_hooks\": \"maybe\"\n"
+                                                                    "  }\n"
+                                                                    "}\n");
+
+    ScopedCurrentPath cwd(workspace.path());
+    tempify::TempifyApp app;
+
+    try {
+        static_cast<void>(app.run({
+            "basic_cpp",
+            target.path().string(),
+            "--set",
+            "project_name=Invalid Hooks Config",
+            "--set",
+            "name_slug=invalid-hooks-config",
+            "--set",
+            "namespace=invalid_hooks_config_ns",
+            "--set",
+            "include_ci=false",
+            "--set",
+            "author=Invalid Hooks Tester",
+            "--non-interactive",
+            "--strict",
+        }));
+        REQUIRE(false);
+    } catch (const tempify::TempifyError &error) {
+        REQUIRE(std::string(error.what()).find("accept_hooks") != std::string::npos);
+    }
+}

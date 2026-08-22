@@ -274,6 +274,12 @@ TEST_CASE(TempifyApp_info_outputs_template_details) {
     REQUIRE(output.find("Questions: 6") != std::string::npos);
 }
 
+TEST_CASE(TempifyApp_info_unknown_template_throws) {
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-info-missing-data-home");
+    tempify::TempifyApp app;
+    REQUIRE_THROWS_AS(app.run({"info", "definitely_missing_template_12345"}), tempify::TempifyError);
+}
+
 TEST_CASE(TempifyApp_list_json_outputs_machine_readable_catalog) {
     ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-list-json-data-home");
     tempify::TempifyApp app;

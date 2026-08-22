@@ -50,3 +50,24 @@ TEST_CASE(TempifyPrebytePassthroughE2E_process_help_matches_tempify_wrapper) {
     REQUIRE_EQ(process_help.exit_code, 0);
     REQUIRE(process_help.stdout_text.find("Embedded Prebyte Passthrough") != std::string::npos);
 }
+
+TEST_CASE(TempifyPrebytePassthroughE2E_invalid_prebyte_args_fail_in_subprocess) {
+    ScopedDirectoryCleanup workspace(std::filesystem::temp_directory_path() / "tempify-prebyte-invalid-workspace");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-prebyte-invalid-data-home");
+    prepare_template_workspace(workspace.path());
+    const auto env = isolated_cli_env(data_home.path());
+    const std::filesystem::path workspace_path = workspace.path();
+
+    const ProcessResult short_form =
+        run_cli({"-p", "definitely-not-a-prebyte-input-file"}, workspace_path, env);
+    REQUIRE(short_form.exit_code != 0);
+
+    const ProcessResult process_form =
+        run_cli({"process", "definitely-not-a-prebyte-input-file"}, workspace_path, env);
+    REQUIRE(process_form.exit_code != 0);
+
+    const std::string combined = short_form.stdout_text + short_form.stderr_text + process_form.stdout_text
+                                 + process_form.stderr_text;
+    REQUIRE(combined.find("Cannot read input file") != std::string::npos
+            || combined.find("error") != std::string::npos);
+}

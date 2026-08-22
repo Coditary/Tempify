@@ -22,3 +22,17 @@ TEST_CASE(TemplateInspector_describes_loaded_template_structure) {
     REQUIRE(text.find("use_notes") != std::string::npos);
     REQUIRE(text.find("Hooks:") != std::string::npos);
 }
+
+TEST_CASE(TemplateInspector_describes_empty_sections_for_minimal_manifest) {
+    tempify::TemplateManifest manifest;
+    manifest.info.id = "minimal_template";
+    manifest.root = std::filesystem::path("/tmp/minimal-template");
+
+    const std::string text = tempify::inspect_template_text(manifest);
+    REQUIRE(text.find("minimal_template") != std::string::npos);
+    REQUIRE(text.find("Description: <none>") != std::string::npos);
+    REQUIRE(text.find("Includes:\n- <none>") != std::string::npos);
+    REQUIRE(text.find("Files:\n- <none>") != std::string::npos);
+    REQUIRE(text.find("Questions:\n- <none>") != std::string::npos);
+    REQUIRE(text.find("Hooks:\n- <none>") != std::string::npos);
+}

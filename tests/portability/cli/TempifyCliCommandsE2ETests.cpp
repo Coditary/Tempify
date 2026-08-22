@@ -262,3 +262,93 @@ TEST_CASE(TempifyCliCommandsE2E_validate_missing_template_fails_in_subprocess) {
     REQUIRE(combined.find("Template not found") != std::string::npos
             || combined.find("not found") != std::string::npos);
 }
+
+TEST_CASE(TempifyCliCommandsE2E_render_existing_target_without_overwrite_fails_in_subprocess) {
+    CommandWorkspace fixture("render-conflict");
+    ScopedDirectoryCleanup target(fixture.cwd().parent_path() / "tempify-cli-commands-render-conflict-target");
+
+    REQUIRE_EQ(run_cli(basic_cpp_render_args(target.path(), "render-conflict"), fixture.cwd(), fixture.env).exit_code,
+               0);
+    const ProcessResult second_render = run_cli(basic_cpp_render_args(target.path(), "render-conflict-2"),
+                                                fixture.cwd(), fixture.env);
+    REQUIRE(second_render.exit_code != 0);
+    const std::string combined = second_render.stdout_text + second_render.stderr_text;
+    REQUIRE(combined.find("exists") != std::string::npos || combined.find("conflict") != std::string::npos
+            || combined.find("already") != std::string::npos);
+}
+
+TEST_CASE(TempifyCliCommandsE2E_unknown_template_catalog_commands_fail_in_subprocess) {
+    CommandWorkspace fixture("catalog-missing");
+    const char *missing = "definitely_missing_template_12345";
+
+    const ProcessResult info = run_cli({"info", missing}, fixture.cwd(), fixture.env);
+    REQUIRE(info.exit_code != 0);
+
+    const ProcessResult inspect = run_cli({"inspect", missing}, fixture.cwd(), fixture.env);
+    REQUIRE(inspect.exit_code != 0);
+
+    const ProcessResult lint = run_cli({"lint", missing}, fixture.cwd(), fixture.env);
+    REQUIRE(lint.exit_code != 0);
+
+    const ProcessResult test_run = run_cli({"test", missing}, fixture.cwd(), fixture.env);
+    REQUIRE(test_run.exit_code != 0);
+
+    const std::string combined = info.stdout_text + info.stderr_text + inspect.stdout_text + inspect.stderr_text;
+    REQUIRE(combined.find("Template not found") != std::string::npos
+            || combined.find("not found") != std::string::npos);
+}
+
+TEST_CASE(TempifyCliCommandsE2E_reapply_without_lock_fails_in_subprocess) {
+    CommandWorkspace fixture("reapply-no-lock");
+    ScopedDirectoryCleanup target(fixture.cwd().parent_path() / "tempify-cli-commands-reapply-no-lock-target");
+    std::filesystem::create_directories(target.path());
+
+    std::vector<std::string> args = basic_cpp_render_args(target.path(), "reapply-no-lock");
+    args.push_back("--reapply");
+    const ProcessResult result = run_cli(args, fixture.cwd(), fixture.env);
+    REQUIRE(result.exit_code != 0);
+    const std::string combined = result.stdout_text + result.stderr_text;
+    REQUIRE(combined.find(".tempify-lock.json") != std::string::npos);
+}
+
+TEST_CASE(TempifyCliCommandsE2E_strict_answers_file_with_unknown_key_fails_in_subprocess) {
+    CommandWorkspace fixture("strict-answers");
+    ScopedDirectoryCleanup target(fixture.cwd().parent_path() / "tempify-cli-commands-strict-answers-target");
+    const std::filesystem::path answers_file = fixture.cwd() / "bad-answers.json";
+    write_text_file(answers_file,
+                    "{\n  \"project_name\": \"Strict Fail App\",\n  \"mystery_key\": \"nope\"\n}\n");
+
+    const ProcessResult result = run_cli({
+                                             "basic_cpp",
+                                             target.path().string(),
+                                             "--answers",
+                                             answers_file.string(),
+                                             "--set",
+                                             "author=CLI Commands Tester",
+                                             "--non-interactive",
+                                             "--strict",
+                                         },
+                                         fixture.cwd(), fixture.env);
+    REQUIRE(result.exit_code != 0);
+    const std::string combined = result.stdout_text + result.stderr_text;
+    REQUIRE(combined.find("mystery_key") != std::string::npos || combined.find("Unknown key") != std::string::npos);
+}
+
+TEST_CASE(TempifyCliCommandsE2E_test_unknown_fixture_fails_in_subprocess) {
+    CommandWorkspace fixture("test-unknown-fixture");
+    const ProcessResult result =
+        run_cli({"test", "basic_cpp", "--fixture", "definitely_missing_fixture"}, fixture.cwd(), fixture.env);
+    REQUIRE(result.exit_code != 0);
+    const std::string combined = result.stdout_text + result.stderr_text;
+    REQUIRE(combined.find("fixture") != std::string::npos || combined.find("not found") != std::string::npos);
+}
+
+TEST_CASE(TempifyCliCommandsE2E_prebyte_invalid_args_fail_in_subprocess) {
+    CommandWorkspace fixture("prebyte-invalid");
+    const ProcessResult result =
+        run_cli({"-p", "definitely-not-a-prebyte-input-file"}, fixture.cwd(), fixture.env);
+    REQUIRE(result.exit_code != 0);
+    const std::string combined = result.stdout_text + result.stderr_text;
+    REQUIRE(combined.find("Cannot read input file") != std::string::npos
+            || combined.find("error") != std::string::npos);
+}

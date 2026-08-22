@@ -100,3 +100,39 @@ TEST_CASE(TempifyConcurrencyE2E_parallel_list_and_inspect_do_not_interfere) {
     REQUIRE(inspect.stdout_text.find("\"template_id\": \"basic_cpp\"") != std::string::npos);
     REQUIRE_EQ(doctor.exit_code, 0);
 }
+
+TEST_CASE(TempifyConcurrencyE2E_parallel_renders_to_same_target_without_overwrite_report_failures) {
+    ScopedDirectoryCleanup workspace(
+        std::filesystem::temp_directory_path() / "tempify-concurrency-same-target-workspace");
+    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-concurrency-same-target");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-concurrency-same-target-data-home");
+    prepare_template_workspace(workspace.path());
+    const auto env = isolated_cli_env(data_home.path());
+    const std::filesystem::path workspace_path = workspace.path();
+    const std::filesystem::path target_path = target.path();
+
+    constexpr int parallel_count = 4;
+    std::vector<std::future<ProcessResult>> futures;
+    futures.reserve(parallel_count);
+    for (int index = 0; index < parallel_count; ++index) {
+        const std::string slug = "same-target-" + std::to_string(index);
+        futures.push_back(std::async(std::launch::async, [workspace_path, env, target_path, slug]() {
+            return run_cli(parallel_render_args(target_path, slug), workspace_path, env);
+        }));
+    }
+
+    std::size_t success_count = 0;
+    std::size_t failure_count = 0;
+    for (int index = 0; index < parallel_count; ++index) {
+        const ProcessResult result = futures[static_cast<std::size_t>(index)].get();
+        if (result.exit_code == 0) {
+            ++success_count;
+        } else {
+            ++failure_count;
+        }
+    }
+
+    REQUIRE_EQ(success_count, static_cast<std::size_t>(1));
+    REQUIRE_EQ(failure_count, static_cast<std::size_t>(3));
+    REQUIRE(std::filesystem::is_regular_file(target_path / "README.md"));
+}

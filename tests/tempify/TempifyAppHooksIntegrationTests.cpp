@@ -155,3 +155,30 @@ TEST_CASE(TempifyApp_render_hook_timeout_flag_aborts_slow_hook_with_phase_diagno
         REQUIRE(std::string(error.what()).find("timed out after 25 ms") != std::string::npos);
     }
 }
+
+TEST_CASE(TempifyApp_accept_hooks_ask_tty_declining_prompt_skips_hooks) {
+    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-app-accept-hooks-no-target");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-accept-hooks-no-data-home");
+    prebyte::test::ScopedEnvironmentVariable force_prompt("TEMPIFY_FORCE_HOOK_PROMPT", "1");
+    tempify::TempifyApp app;
+
+    ScopedStdinCapture input("no\n");
+    REQUIRE_EQ(app.run({
+                   "advanced_hooks_layout",
+                   target.path().string(),
+                   "--accept-hooks",
+                   "ask",
+                   "--set",
+                   "project_name=Declined Hooks",
+                   "--set",
+                   "project_slug=declined-hooks",
+                   "--set",
+                   "use_notes=false",
+               }),
+               0);
+
+    REQUIRE(std::filesystem::exists(target.path() / "README.md"));
+    REQUIRE(!std::filesystem::exists(target.path() / "pre.txt"));
+    REQUIRE(!std::filesystem::exists(target.path() / "post.txt"));
+    REQUIRE(!std::filesystem::exists(target.path() / "script-marker.txt"));
+}

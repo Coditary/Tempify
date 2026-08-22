@@ -76,3 +76,44 @@ TEST_CASE(TempifyCliBinary_doctor_runs_in_subprocess) {
     REQUIRE_EQ(result.exit_code, 0);
     REQUIRE(result.stdout_text.find("Doctor") != std::string::npos || result.stdout_text.find("doctor") != std::string::npos);
 }
+
+TEST_CASE(TempifyCliBinary_render_unknown_template_fails_in_subprocess) {
+    ScopedDirectoryCleanup workspace(std::filesystem::temp_directory_path() / "tempify-cli-binary-missing-workspace");
+    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-cli-binary-missing-target");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-cli-binary-missing-data-home");
+    prepare_template_workspace(workspace.path());
+
+    const ProcessResult result = run_cli({"definitely_missing_template_12345", target.path().string()}, workspace.path(),
+                                         isolated_cli_env(data_home.path()));
+    REQUIRE(result.exit_code != 0);
+    const std::string combined = result.stdout_text + result.stderr_text;
+    REQUIRE(combined.find("Template not found") != std::string::npos
+            || combined.find("not found") != std::string::npos);
+}
+
+TEST_CASE(TempifyCliBinary_render_existing_target_without_overwrite_fails_in_subprocess) {
+    ScopedDirectoryCleanup workspace(std::filesystem::temp_directory_path() / "tempify-cli-binary-conflict-workspace");
+    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-cli-binary-conflict-target");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-cli-binary-conflict-data-home");
+    prepare_template_workspace(workspace.path());
+    const auto env = isolated_cli_env(data_home.path());
+
+    const std::vector<std::string> render_args = {
+        "basic_cpp",
+        target.path().string(),
+        "--set",
+        "project_name=Binary Conflict",
+        "--set",
+        "name_slug=binary-conflict",
+        "--set",
+        "namespace=binary_conflict_ns",
+        "--set",
+        "include_ci=false",
+        "--set",
+        "author=Binary Tester",
+    };
+    REQUIRE_EQ(run_cli(render_args, workspace.path(), env).exit_code, 0);
+
+    const ProcessResult second_render = run_cli(render_args, workspace.path(), env);
+    REQUIRE(second_render.exit_code != 0);
+}

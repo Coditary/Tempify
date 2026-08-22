@@ -123,3 +123,44 @@ TEST_CASE(TempifyWorkflowE2E_diff_reports_changes_after_manual_edit) {
     REQUIRE_EQ(diff.exit_code, 0);
     REQUIRE(diff.stdout_text.find("README.md") != std::string::npos || diff.stdout_text.find("Diff ") != std::string::npos);
 }
+
+TEST_CASE(TempifyWorkflowE2E_reapply_without_lock_fails_in_subprocess) {
+    ScopedDirectoryCleanup workspace(std::filesystem::temp_directory_path() / "tempify-workflow-reapply-fail-workspace");
+    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-workflow-reapply-fail-target");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-workflow-reapply-fail-data-home");
+    prepare_template_workspace(workspace.path());
+    const auto env = isolated_cli_env(data_home.path());
+    std::filesystem::create_directories(target.path());
+
+    std::vector<std::string> args = basic_cpp_render_args(target.path(), "reapply-fail");
+    args.push_back("--reapply");
+    const ProcessResult result = run_cli(args, workspace.path(), env);
+    REQUIRE(result.exit_code != 0);
+    const std::string combined = result.stdout_text + result.stderr_text;
+    REQUIRE(combined.find(".tempify-lock.json") != std::string::npos);
+}
+
+TEST_CASE(TempifyWorkflowE2E_strict_rejects_unknown_answers_keys_in_subprocess) {
+    ScopedDirectoryCleanup workspace(std::filesystem::temp_directory_path() / "tempify-workflow-strict-fail-workspace");
+    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-workflow-strict-fail-target");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-workflow-strict-fail-data-home");
+    prepare_template_workspace(workspace.path());
+    const auto env = isolated_cli_env(data_home.path());
+    const std::filesystem::path answers_file = workspace.path() / "bad-answers.json";
+    write_text_file(answers_file, "{\n  \"project_name\": \"Strict Fail\",\n  \"mystery\": \"value\"\n}\n");
+
+    const ProcessResult result = run_cli({
+                                             "basic_cpp",
+                                             target.path().string(),
+                                             "--answers",
+                                             answers_file.string(),
+                                             "--set",
+                                             "author=Workflow Tester",
+                                             "--non-interactive",
+                                             "--strict",
+                                         },
+                                         workspace.path(), env);
+    REQUIRE(result.exit_code != 0);
+    const std::string combined = result.stdout_text + result.stderr_text;
+    REQUIRE(combined.find("mystery") != std::string::npos || combined.find("Unknown key") != std::string::npos);
+}
