@@ -3,7 +3,7 @@
 #include "tempify/domain/BuildPlan.h"
 #include "tempify/domain/TemplateManifest.h"
 
-#include "runtime/LuaHeaders.h"
+#include "runtime/lua/LuaHeaders.h"
 
 #include <filesystem>
 #include <map>

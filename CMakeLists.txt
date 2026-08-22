@@ -20,7 +20,7 @@ endif()
 
 find_package(CLI11 CONFIG REQUIRED)
 
-set(TEMPIFY_PREBYTE_VERSION "v1.0.0" CACHE STRING "Pinned Prebyte git tag")
+set(TEMPIFY_PREBYTE_VERSION "v1.1.1" CACHE STRING "Pinned Prebyte git tag")
 set(TEMPIFY_PREBYTE_SOURCE_DIR "" CACHE PATH "Optional local Prebyte source root")
 
 set(PREBYTE_BUILD_TESTS OFF CACHE BOOL "Build Prebyte tests" FORCE)
