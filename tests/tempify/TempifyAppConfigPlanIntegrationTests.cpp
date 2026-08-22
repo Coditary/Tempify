@@ -8,6 +8,7 @@ namespace {
 using tempify::test_support::create_basic_template_at;
 using tempify::test_support::create_required_only_template;
 using tempify::test_support::create_sensitive_template;
+using tempify::test_support::create_slow_hook_template;
 using tempify::test_support::json_escaped_path;
 using tempify::test_support::link_test_templates_into_workspace;
 using tempify::test_support::read_text_file;
@@ -369,4 +370,105 @@ TEST_CASE(TempifyApp_doctor_json_outputs_machine_readable_summary) {
     REQUIRE(output.find("\"shared_index_exists\": ") != std::string::npos);
     REQUIRE(output.find("\"shared_index_status\": \"ok\"") != std::string::npos);
     REQUIRE(output.find("\"catalog_status\": ") != std::string::npos);
+}
+
+TEST_CASE(TempifyApp_config_hook_timeout_ms_applies_during_render_without_cli_flag) {
+    ScopedDirectoryCleanup workspace(std::filesystem::temp_directory_path() / "tempify-app-config-hook-timeout-workspace");
+    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-app-config-hook-timeout-target");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-config-hook-timeout-data-home");
+    ScopedTempifyConfigHome config_home(std::filesystem::temp_directory_path() / "tempify-app-config-hook-timeout-config-home");
+    const std::filesystem::path template_root = create_slow_hook_template(workspace.path());
+
+    write_text_file(config_home.path() / "tempify" / "config.json", "{\n"
+                                                                    "  \"render\": {\n"
+                                                                    "    \"accept_hooks\": \"yes\",\n"
+                                                                    "    \"hook_timeout_ms\": 25\n"
+                                                                    "  }\n"
+                                                                    "}\n");
+
+    ScopedCurrentPath cwd(workspace.path());
+    tempify::TempifyApp app;
+
+    try {
+        static_cast<void>(app.run({
+            template_root.string(),
+            target.path().string(),
+            "--set",
+            "project_name=Config Timeout App",
+            "--non-interactive",
+            "--strict",
+        }));
+        REQUIRE(false);
+    } catch (const tempify::TempifyError &error) {
+        const std::string message = error.what();
+        REQUIRE(message.find("Hook phase 'post' failed") != std::string::npos);
+        REQUIRE(message.find("post.lua") != std::string::npos);
+        REQUIRE(message.find("timed out after 25 ms") != std::string::npos);
+    }
+}
+
+TEST_CASE(TempifyApp_config_hook_timeout_ms_cli_flag_overrides_config_value) {
+    ScopedDirectoryCleanup workspace(
+        std::filesystem::temp_directory_path() / "tempify-app-config-hook-timeout-override-workspace");
+    ScopedDirectoryCleanup target(
+        std::filesystem::temp_directory_path() / "tempify-app-config-hook-timeout-override-target");
+    ScopedTempifyDataHome data_home(
+        std::filesystem::temp_directory_path() / "tempify-app-config-hook-timeout-override-data-home");
+    ScopedTempifyConfigHome config_home(
+        std::filesystem::temp_directory_path() / "tempify-app-config-hook-timeout-override-config-home");
+    const std::filesystem::path template_root = create_slow_hook_template(workspace.path());
+
+    write_text_file(config_home.path() / "tempify" / "config.json", "{\n"
+                                                                    "  \"render\": {\n"
+                                                                    "    \"accept_hooks\": \"yes\",\n"
+                                                                    "    \"hook_timeout_ms\": 5000\n"
+                                                                    "  }\n"
+                                                                    "}\n");
+
+    ScopedCurrentPath cwd(workspace.path());
+    tempify::TempifyApp app;
+
+    try {
+        static_cast<void>(app.run({
+            template_root.string(),
+            target.path().string(),
+            "--hook-timeout-ms",
+            "25",
+            "--set",
+            "project_name=Config Timeout Override App",
+            "--non-interactive",
+            "--strict",
+        }));
+        REQUIRE(false);
+    } catch (const tempify::TempifyError &error) {
+        const std::string message = error.what();
+        REQUIRE(message.find("timed out after 25 ms") != std::string::npos);
+        REQUIRE(message.find("timed out after 5000 ms") == std::string::npos);
+    }
+}
+
+TEST_CASE(TempifyApp_template_env_file_supplies_defaults_during_render) {
+    ScopedDirectoryCleanup workspace(std::filesystem::temp_directory_path() / "tempify-app-template-env-workspace");
+    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-app-template-env-target");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-template-env-data-home");
+    const std::filesystem::path template_root =
+        create_basic_template_at(workspace.path() / "templates" / "env_defaults_demo", "env_defaults_demo",
+                                 "Env Defaults Demo", "1.0.0", "Template with .env defaults", "FROM ENV DEFAULTS\n");
+    write_text_file(template_root / ".env",
+                    "project_name=From Env File\n"
+                    "project_slug=from-env-file\n");
+
+    ScopedCurrentPath cwd(workspace.path());
+    tempify::TempifyApp app;
+    REQUIRE_EQ(app.run({
+                   "env_defaults_demo",
+                   target.path().string(),
+                   "--non-interactive",
+                   "--strict",
+               }),
+               0);
+
+    const std::string readme = read_text_file(target.path() / "README.md");
+    REQUIRE(readme.find("# From Env File") != std::string::npos);
+    REQUIRE(readme.find("FROM ENV DEFAULTS") != std::string::npos);
 }

@@ -131,7 +131,25 @@ TEST_CASE(TempifyCliCommandsE2E_test_command_runs_fixtures_in_subprocess) {
     REQUIRE(list_fixtures.stdout_text.find("ci_enabled") != std::string::npos);
 }
 
-TEST_CASE(TempifyCliCommandsE2E_refresh_and_completion_in_subprocess) {
+TEST_CASE(TempifyCliCommandsE2E_completion_scripts_for_all_shells_in_subprocess) {
+    CommandWorkspace fixture("completion");
+    const ProcessResult bash = run_cli({"completion", "bash"}, fixture.cwd(), fixture.env);
+    REQUIRE_EQ(bash.exit_code, 0);
+    REQUIRE(bash.stdout_text.find("complete -F _tempify tempify") != std::string::npos);
+    REQUIRE(bash.stdout_text.find("reapply") != std::string::npos);
+
+    const ProcessResult zsh = run_cli({"completion", "zsh"}, fixture.cwd(), fixture.env);
+    REQUIRE_EQ(zsh.exit_code, 0);
+    REQUIRE(zsh.stdout_text.find("#compdef tempify") != std::string::npos);
+    REQUIRE(zsh.stdout_text.find("compdef _tempify tempify") != std::string::npos);
+
+    const ProcessResult fish = run_cli({"completion", "fish"}, fixture.cwd(), fixture.env);
+    REQUIRE_EQ(fish.exit_code, 0);
+    REQUIRE(fish.stdout_text.find("complete -c tempify -f") != std::string::npos);
+    REQUIRE(fish.stdout_text.find("__fish_use_subcommand") != std::string::npos);
+}
+
+TEST_CASE(TempifyCliCommandsE2E_refresh_in_subprocess) {
     CommandWorkspace fixture("refresh");
     const ProcessResult refresh = run_cli({"refresh"}, fixture.cwd(), fixture.env);
     REQUIRE_EQ(refresh.exit_code, 0);
@@ -142,11 +160,6 @@ TEST_CASE(TempifyCliCommandsE2E_refresh_and_completion_in_subprocess) {
     REQUIRE_EQ(refresh_json.exit_code, 0);
     REQUIRE(refresh_json.stdout_text.find("\"refreshed\": ") != std::string::npos);
     REQUIRE(refresh_json.stdout_text.find("\"index_file\": ") != std::string::npos);
-
-    const ProcessResult completion = run_cli({"completion", "bash"}, fixture.cwd(), fixture.env);
-    REQUIRE_EQ(completion.exit_code, 0);
-    REQUIRE(completion.stdout_text.find("tempify") != std::string::npos);
-    REQUIRE(completion.stdout_text.find("complete") != std::string::npos);
 }
 
 TEST_CASE(TempifyCliCommandsE2E_questions_overview_in_subprocess) {
