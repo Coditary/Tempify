@@ -18,23 +18,23 @@ struct StoredTemplateRecord {
 };
 
 class LocalTemplateStore {
-public:
+  public:
     explicit LocalTemplateStore(std::filesystem::path shared_root);
 
-    const std::filesystem::path& root() const noexcept;
-    const std::filesystem::path& templates_root() const noexcept;
-    const std::filesystem::path& index_root() const noexcept;
-    const std::filesystem::path& index_file() const noexcept;
+    const std::filesystem::path &root() const noexcept;
+    const std::filesystem::path &templates_root() const noexcept;
+    const std::filesystem::path &index_root() const noexcept;
+    const std::filesystem::path &index_file() const noexcept;
 
     std::vector<StoredTemplateRecord> list_templates() const;
-    std::optional<StoredTemplateRecord> find_template(const std::string& id) const;
-    std::size_t refresh(const TemplateLoader& loader) const;
+    std::optional<StoredTemplateRecord> find_template(const std::string &id) const;
+    std::size_t refresh(const TemplateLoader &loader) const;
 
-private:
+  private:
     std::filesystem::path root_;
     std::filesystem::path templates_root_;
     std::filesystem::path index_root_;
     std::filesystem::path index_file_;
 };
 
-}
+} // namespace tempify

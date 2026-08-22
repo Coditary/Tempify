@@ -1,11 +1,10 @@
 #include "TempifyTestSupport.h"
-
 #include "tempify/config/TempifyConfig.h"
+#include "tempify/hook/HookTrustStore.h"
+#include "tempify/lua/LuaEngine.h"
 #include "tempify/store/AvailableTemplateCache.h"
 #include "tempify/store/LocalTemplateStore.h"
 #include "tempify/support/Errors.h"
-#include "tempify/lua/LuaEngine.h"
-#include "tempify/hook/HookTrustStore.h"
 #include "tempify/support/Paths.h"
 #include "tempify/template/TemplateLoader.h"
 
@@ -13,14 +12,14 @@
 #include <string>
 
 namespace {
-using tempify::test_support::ScopedDirectoryCleanup;
 using tempify::test_support::create_basic_template_at;
 using tempify::test_support::create_shared_template;
 using tempify::test_support::read_text_file;
+using tempify::test_support::ScopedDirectoryCleanup;
 using tempify::test_support::write_available_template_cache;
 using tempify::test_support::write_text_file;
 
-}
+} // namespace
 
 TEST_CASE(Paths_resolve_tempify_data_root_prefers_xdg_and_workspace_templates_root_is_optional) {
     ScopedDirectoryCleanup data_home(std::filesystem::temp_directory_path() / "tempify-paths-data-home-test");
@@ -90,16 +89,10 @@ TEST_CASE(LocalTemplateStore_refresh_writes_index_and_lists_shared_templates) {
 
 TEST_CASE(LocalTemplateStore_refresh_rejects_duplicate_shared_template_ids) {
     ScopedDirectoryCleanup shared_root(std::filesystem::temp_directory_path() / "tempify-store-duplicate-refresh-test");
-    static_cast<void>(create_basic_template_at(shared_root.path() / "templates" / "alpha",
-                                               "duplicate_tpl",
-                                               "Alpha",
-                                               "1.0.0",
-                                               "Alpha entry"));
-    static_cast<void>(create_basic_template_at(shared_root.path() / "templates" / "beta",
-                                               "duplicate_tpl",
-                                               "Beta",
-                                               "1.0.0",
-                                               "Beta entry"));
+    static_cast<void>(create_basic_template_at(shared_root.path() / "templates" / "alpha", "duplicate_tpl", "Alpha",
+                                               "1.0.0", "Alpha entry"));
+    static_cast<void>(create_basic_template_at(shared_root.path() / "templates" / "beta", "duplicate_tpl", "Beta",
+                                               "1.0.0", "Beta entry"));
 
     tempify::LuaEngine lua_engine;
     tempify::TemplateLoader loader(lua_engine);
@@ -118,27 +111,26 @@ TEST_CASE(AvailableTemplateCache_missing_file_returns_empty) {
 
 TEST_CASE(AvailableTemplateCache_loads_records_from_reqpack_cache) {
     ScopedDirectoryCleanup shared_root(std::filesystem::temp_directory_path() / "tempify-available-cache-load-test");
-    write_available_template_cache(shared_root.path(),
-                                   "{\n"
-                                   "  \"schemaVersion\": 1,\n"
-                                   "  \"templates\": [\n"
-                                   "    {\n"
-                                   "      \"id\": \"java-xyz\",\n"
-                                   "      \"name\": \"Java XYZ\",\n"
-                                   "      \"description\": \"Small Java starter template\",\n"
-                                   "      \"version\": \"0.1.0\",\n"
-                                   "      \"tags\": [\"java\", \"starter\"],\n"
-                                   "      \"source\": {\n"
-                                   "        \"url\": \"../tempify-templates\",\n"
-                                   "        \"ref\": \"main\",\n"
-                                   "        \"subdir\": \"java-xyz\"\n"
-                                   "      },\n"
-                                   "      \"repository\": {\n"
-                                   "        \"id\": \"local-registry\"\n"
-                                   "      }\n"
-                                   "    }\n"
-                                   "  ]\n"
-                                   "}\n");
+    write_available_template_cache(shared_root.path(), "{\n"
+                                                       "  \"schemaVersion\": 1,\n"
+                                                       "  \"templates\": [\n"
+                                                       "    {\n"
+                                                       "      \"id\": \"java-xyz\",\n"
+                                                       "      \"name\": \"Java XYZ\",\n"
+                                                       "      \"description\": \"Small Java starter template\",\n"
+                                                       "      \"version\": \"0.1.0\",\n"
+                                                       "      \"tags\": [\"java\", \"starter\"],\n"
+                                                       "      \"source\": {\n"
+                                                       "        \"url\": \"../tempify-templates\",\n"
+                                                       "        \"ref\": \"main\",\n"
+                                                       "        \"subdir\": \"java-xyz\"\n"
+                                                       "      },\n"
+                                                       "      \"repository\": {\n"
+                                                       "        \"id\": \"local-registry\"\n"
+                                                       "      }\n"
+                                                       "    }\n"
+                                                       "  ]\n"
+                                                       "}\n");
 
     tempify::AvailableTemplateCache cache(shared_root.path());
     const auto entries = cache.list_templates();
@@ -153,28 +145,26 @@ TEST_CASE(TempifyConfig_load_and_merge_support_defaults_and_render_overlays) {
     const std::filesystem::path global_path = root.path() / "global.json";
     const std::filesystem::path workspace_path = root.path() / "workspace.json";
 
-    write_text_file(global_path,
-                    "{\n"
-                    "  \"defaults\": {\n"
-                    "    \"project_name\": \"Global App\",\n"
-                    "    \"include_ci\": false\n"
-                    "  },\n"
-                    "  \"render\": {\n"
-                    "    \"accept_hooks\": \"no\",\n"
-                    "    \"hook_timeout_ms\": 1234\n"
-                    "  }\n"
-                    "}\n");
-    write_text_file(workspace_path,
-                    "{\n"
-                    "  \"defaults\": {\n"
-                    "    \"project_name\": \"Workspace App\",\n"
-                    "    \"author\": \"Workspace Author\"\n"
-                    "  },\n"
-                    "  \"render\": {\n"
-                    "    \"accept_hooks\": \"yes\",\n"
-                    "    \"existing_path_behavior\": \"skip\"\n"
-                    "  }\n"
-                    "}\n");
+    write_text_file(global_path, "{\n"
+                                 "  \"defaults\": {\n"
+                                 "    \"project_name\": \"Global App\",\n"
+                                 "    \"include_ci\": false\n"
+                                 "  },\n"
+                                 "  \"render\": {\n"
+                                 "    \"accept_hooks\": \"no\",\n"
+                                 "    \"hook_timeout_ms\": 1234\n"
+                                 "  }\n"
+                                 "}\n");
+    write_text_file(workspace_path, "{\n"
+                                    "  \"defaults\": {\n"
+                                    "    \"project_name\": \"Workspace App\",\n"
+                                    "    \"author\": \"Workspace Author\"\n"
+                                    "  },\n"
+                                    "  \"render\": {\n"
+                                    "    \"accept_hooks\": \"yes\",\n"
+                                    "    \"existing_path_behavior\": \"skip\"\n"
+                                    "  }\n"
+                                    "}\n");
 
     const tempify::TempifyConfig global = tempify::load_tempify_config_file(global_path);
     const tempify::TempifyConfig workspace = tempify::load_tempify_config_file(workspace_path);
@@ -194,10 +184,9 @@ TEST_CASE(TempifyConfig_load_and_merge_support_defaults_and_render_overlays) {
 TEST_CASE(TempifyConfig_unknown_keys_throw) {
     ScopedDirectoryCleanup root(std::filesystem::temp_directory_path() / "tempify-config-unknown-key-test");
     const std::filesystem::path config_path = root.path() / "bad.json";
-    write_text_file(config_path,
-                    "{\n"
-                    "  \"mystery\": true\n"
-                    "}\n");
+    write_text_file(config_path, "{\n"
+                                 "  \"mystery\": true\n"
+                                 "}\n");
 
     REQUIRE_THROWS_AS(tempify::load_tempify_config_file(config_path), tempify::TempifyError);
 }

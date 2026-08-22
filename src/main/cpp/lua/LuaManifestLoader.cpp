@@ -1,7 +1,5 @@
-#include "tempify/lua/LuaEngine.h"
-
 #include "LuaEngineInternal.h"
-
+#include "tempify/lua/LuaEngine.h"
 #include "tempify/support/EnvLoader.h"
 #include "tempify/support/Errors.h"
 
@@ -11,9 +9,8 @@ namespace tempify {
 
 namespace {
 
-ConflictStrategy parse_conflict_strategy(const std::string& value,
-                                         const std::filesystem::path& path,
-                                         const std::string& field_name) {
+ConflictStrategy parse_conflict_strategy(const std::string &value, const std::filesystem::path &path,
+                                         const std::string &field_name) {
     const std::string lowered = lua_internal::lower_copy(lua_internal::trim_copy(value));
     if (lowered == "replace") {
         return ConflictStrategy::Replace;
@@ -28,9 +25,8 @@ ConflictStrategy parse_conflict_strategy(const std::string& value,
     lua_internal::throw_lua_error(path, "Unsupported conflict strategy in '" + field_name + "': " + value);
 }
 
-TemplateMergeConfig load_merge_config_from_stack(lua_State* state,
-                                                 const int table_index,
-                                                 const std::filesystem::path& path) {
+TemplateMergeConfig load_merge_config_from_stack(lua_State *state, const int table_index,
+                                                 const std::filesystem::path &path) {
     TemplateMergeConfig config;
 
     lua_getfield(state, table_index, "file_conflicts");
@@ -58,35 +54,29 @@ TemplateMergeConfig load_merge_config_from_stack(lua_State* state,
 
     lua_getfield(state, table_index, "question_conflicts");
     if (lua_isnil(state, -1) == 0) {
-        config.question_conflicts = parse_conflict_strategy(
-            lua_internal::value_to_string(state, -1, path),
-            path,
-            "question_conflicts");
+        config.question_conflicts =
+            parse_conflict_strategy(lua_internal::value_to_string(state, -1, path), path, "question_conflicts");
     }
     lua_pop(state, 1);
 
     lua_getfield(state, table_index, "pre_hook_conflict");
     if (lua_isnil(state, -1) == 0) {
-        config.pre_hook_conflict = parse_conflict_strategy(
-            lua_internal::value_to_string(state, -1, path),
-            path,
-            "pre_hook_conflict");
+        config.pre_hook_conflict =
+            parse_conflict_strategy(lua_internal::value_to_string(state, -1, path), path, "pre_hook_conflict");
     }
     lua_pop(state, 1);
 
     lua_getfield(state, table_index, "post_hook_conflict");
     if (lua_isnil(state, -1) == 0) {
-        config.post_hook_conflict = parse_conflict_strategy(
-            lua_internal::value_to_string(state, -1, path),
-            path,
-            "post_hook_conflict");
+        config.post_hook_conflict =
+            parse_conflict_strategy(lua_internal::value_to_string(state, -1, path), path, "post_hook_conflict");
     }
     lua_pop(state, 1);
 
     return config;
 }
 
-std::vector<LayoutRule> load_layout_rules_from_file(const std::filesystem::path& path) {
+std::vector<LayoutRule> load_layout_rules_from_file(const std::filesystem::path &path) {
     auto state = lua_internal::make_state();
     lua_internal::register_metadata_helpers(state.get());
     lua_internal::load_file_result(state.get(), path);
@@ -109,7 +99,8 @@ std::vector<LayoutRule> load_layout_rules_from_file(const std::filesystem::path&
         rule.source = lua_internal::required_string_field(state.get(), lua_gettop(state.get()), "source", path);
         rule.source_path = path;
 
-        if (const auto target = lua_internal::optional_string_field(state.get(), lua_gettop(state.get()), "target", path)) {
+        if (const auto target =
+                lua_internal::optional_string_field(state.get(), lua_gettop(state.get()), "target", path)) {
             rule.target = *target;
         }
         rule.exclude = lua_internal::optional_bool_field(state.get(), lua_gettop(state.get()), "exclude", false, path);
@@ -127,14 +118,14 @@ std::vector<LayoutRule> load_layout_rules_from_file(const std::filesystem::path&
     return rules;
 }
 
-std::vector<ScriptCatalogEntry> load_script_catalog(const std::filesystem::path& template_root) {
+std::vector<ScriptCatalogEntry> load_script_catalog(const std::filesystem::path &template_root) {
     const std::filesystem::path scripts_root = template_root / "scripts";
     std::vector<ScriptCatalogEntry> scripts;
     if (!std::filesystem::is_directory(scripts_root)) {
         return scripts;
     }
 
-    for (const auto& entry : std::filesystem::directory_iterator(scripts_root)) {
+    for (const auto &entry : std::filesystem::directory_iterator(scripts_root)) {
         if (!entry.is_regular_file()) {
             continue;
         }
@@ -151,11 +142,8 @@ std::vector<ScriptCatalogEntry> load_script_catalog(const std::filesystem::path&
     return scripts;
 }
 
-QuestionDefinition load_question_entry(lua_State* state,
-                                       const int table_index,
-                                       const std::filesystem::path& path,
-                                       const std::string& group_name,
-                                       const std::size_t source_index) {
+QuestionDefinition load_question_entry(lua_State *state, const int table_index, const std::filesystem::path &path,
+                                       const std::string &group_name, const std::size_t source_index) {
     if (lua_istable(state, table_index) == 0) {
         lua_internal::throw_lua_error(path, "Question entry must be table");
     }
@@ -227,9 +215,8 @@ QuestionDefinition load_question_entry(lua_State* state,
     return question;
 }
 
-void load_questions_from_file(const std::filesystem::path& path,
-                              std::vector<std::string>& group_order,
-                              std::vector<QuestionDefinition>& questions) {
+void load_questions_from_file(const std::filesystem::path &path, std::vector<std::string> &group_order,
+                              std::vector<QuestionDefinition> &questions) {
     auto state = lua_internal::make_state();
     lua_internal::register_metadata_helpers(state.get());
     lua_internal::load_file_result(state.get(), path);
@@ -284,13 +271,13 @@ void load_questions_from_file(const std::filesystem::path& path,
         lua_pop(state.get(), 1);
     }
 
-    for (const auto& group_name : group_order) {
+    for (const auto &group_name : group_order) {
         if (std::ranges::find(loaded_groups, group_name) == loaded_groups.end()) {
             lua_internal::throw_lua_error(path, "Group declared in 'order' missing from 'groups': " + group_name);
         }
     }
 
-    for (const auto& group_name : loaded_groups) {
+    for (const auto &group_name : loaded_groups) {
         if (std::ranges::find(group_order, group_name) == group_order.end()) {
             lua_internal::throw_lua_error(path, "Group found in 'groups' missing from 'order': " + group_name);
         }
@@ -299,7 +286,7 @@ void load_questions_from_file(const std::filesystem::path& path,
     lua_pop(state.get(), 1);
 }
 
-std::vector<std::string> load_include_ids_from_file(const std::filesystem::path& path) {
+std::vector<std::string> load_include_ids_from_file(const std::filesystem::path &path) {
     auto state = lua_internal::make_state();
     lua_internal::register_metadata_helpers(state.get());
     lua_internal::load_file_result(state.get(), path);
@@ -309,8 +296,8 @@ std::vector<std::string> load_include_ids_from_file(const std::filesystem::path&
     return lua_internal::string_list_from_stack(state.get(), lua_gettop(state.get()), path);
 }
 
-PrebyteConfig load_prebyte_config_from_file(const std::filesystem::path& path,
-                                            const std::filesystem::path& template_root) {
+PrebyteConfig load_prebyte_config_from_file(const std::filesystem::path &path,
+                                            const std::filesystem::path &template_root) {
     auto state = lua_internal::make_state();
     lua_internal::register_metadata_helpers(state.get());
     lua_internal::load_file_result(state.get(), path);
@@ -323,7 +310,7 @@ PrebyteConfig load_prebyte_config_from_file(const std::filesystem::path& path,
     lua_getfield(state.get(), -1, "include_paths");
     if (lua_istable(state.get(), -1) != 0) {
         const auto values = lua_internal::string_list_from_stack(state.get(), lua_gettop(state.get()), path);
-        for (const auto& value : values) {
+        for (const auto &value : values) {
             config.include_paths.push_back(template_root / value);
         }
     }
@@ -338,14 +325,14 @@ PrebyteConfig load_prebyte_config_from_file(const std::filesystem::path& path,
     return config;
 }
 
-}
+} // namespace
 
-TemplateInfo LuaEngine::load_template_info(const std::filesystem::path& template_root) const {
+TemplateInfo LuaEngine::load_template_info(const std::filesystem::path &template_root) const {
     const TemplateManifest manifest = load_partial_manifest(template_root);
     return manifest.info;
 }
 
-TemplateManifest LuaEngine::load_partial_manifest(const std::filesystem::path& template_root) const {
+TemplateManifest LuaEngine::load_partial_manifest(const std::filesystem::path &template_root) const {
     const std::filesystem::path manifest_path = template_root / "template.lua";
     if (!std::filesystem::is_regular_file(manifest_path)) {
         throw TempifyError("Missing template manifest: " + manifest_path.string());
@@ -363,18 +350,28 @@ TemplateManifest LuaEngine::load_partial_manifest(const std::filesystem::path& t
     manifest.root = template_root;
     manifest.info.root = template_root;
     manifest.info.id = lua_internal::required_string_field(state.get(), lua_gettop(state.get()), "id", manifest_path);
-    manifest.info.name = lua_internal::optional_string_field(state.get(), lua_gettop(state.get()), "name", manifest_path).value_or(manifest.info.id);
-    manifest.info.description = lua_internal::optional_string_field(state.get(), lua_gettop(state.get()), "description", manifest_path).value_or("");
-    manifest.version = lua_internal::optional_string_field(state.get(), lua_gettop(state.get()), "version", manifest_path).value_or("0.1.0");
+    manifest.info.name =
+        lua_internal::optional_string_field(state.get(), lua_gettop(state.get()), "name", manifest_path)
+            .value_or(manifest.info.id);
+    manifest.info.description =
+        lua_internal::optional_string_field(state.get(), lua_gettop(state.get()), "description", manifest_path)
+            .value_or("");
+    manifest.version =
+        lua_internal::optional_string_field(state.get(), lua_gettop(state.get()), "version", manifest_path)
+            .value_or("0.1.0");
     manifest.info.version = manifest.version;
-    manifest.source_dir = lua_internal::optional_string_field(state.get(), lua_gettop(state.get()), "source_dir", manifest_path).value_or("files");
+    manifest.source_dir =
+        lua_internal::optional_string_field(state.get(), lua_gettop(state.get()), "source_dir", manifest_path)
+            .value_or("files");
     manifest.output_path_template = manifest.info.id;
 
     lua_getfield(state.get(), -1, "output");
     if (lua_istable(state.get(), -1) != 0) {
-        manifest.output_path_template = lua_internal::optional_string_field(state.get(), lua_gettop(state.get()), "path", manifest_path)
-                                            .value_or(manifest.output_path_template);
-        manifest.overwrite = lua_internal::optional_bool_field(state.get(), lua_gettop(state.get()), "overwrite", false, manifest_path);
+        manifest.output_path_template =
+            lua_internal::optional_string_field(state.get(), lua_gettop(state.get()), "path", manifest_path)
+                .value_or(manifest.output_path_template);
+        manifest.overwrite =
+            lua_internal::optional_bool_field(state.get(), lua_gettop(state.get()), "overwrite", false, manifest_path);
     }
     lua_pop(state.get(), 1);
 
@@ -386,7 +383,8 @@ TemplateManifest LuaEngine::load_partial_manifest(const std::filesystem::path& t
     }
     lua_pop(state.get(), 1);
 
-    manifest.include_ids = lua_internal::optional_string_list_field(state.get(), lua_gettop(state.get()), "includes", manifest_path);
+    manifest.include_ids =
+        lua_internal::optional_string_list_field(state.get(), lua_gettop(state.get()), "includes", manifest_path);
 
     const std::filesystem::path source_root = template_root / manifest.source_dir;
     if (!std::filesystem::is_directory(source_root)) {
@@ -397,7 +395,7 @@ TemplateManifest LuaEngine::load_partial_manifest(const std::filesystem::path& t
         .template_id = manifest.info.id,
     });
 
-    for (const auto& entry : std::filesystem::recursive_directory_iterator(source_root)) {
+    for (const auto &entry : std::filesystem::recursive_directory_iterator(source_root)) {
         const std::filesystem::path relative = std::filesystem::relative(entry.path(), source_root);
         if (relative.empty()) {
             continue;
@@ -431,7 +429,7 @@ TemplateManifest LuaEngine::load_partial_manifest(const std::filesystem::path& t
         load_questions_from_file(questions_path, manifest.question_group_order, manifest.questions);
     }
 
-    for (const auto& question : manifest.questions) {
+    for (const auto &question : manifest.questions) {
         if (question.group.empty()) {
             lua_internal::throw_lua_error(manifest_path, "Question missing group after load: " + question.key);
         }
@@ -451,7 +449,7 @@ TemplateManifest LuaEngine::load_partial_manifest(const std::filesystem::path& t
     const std::filesystem::path layout_path = template_root / "layout.lua";
     if (std::filesystem::is_regular_file(layout_path)) {
         manifest.layout_rules = load_layout_rules_from_file(layout_path);
-        for (auto& rule : manifest.layout_rules) {
+        for (auto &rule : manifest.layout_rules) {
             rule.source_template_id = manifest.info.id;
         }
     }
@@ -482,4 +480,4 @@ TemplateManifest LuaEngine::load_partial_manifest(const std::filesystem::path& t
     return manifest;
 }
 
-}
+} // namespace tempify

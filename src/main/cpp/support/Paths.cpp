@@ -23,8 +23,8 @@ struct SearchCeiling {
     SearchCeilingMode mode = SearchCeilingMode::Inclusive;
 };
 
-std::optional<std::filesystem::path> environment_path(const char* name) {
-    if (const char* value = std::getenv(name)) {
+std::optional<std::filesystem::path> environment_path(const char *name) {
+    if (const char *value = std::getenv(name)) {
         if (*value != '\0') {
             return std::filesystem::path(value);
         }
@@ -32,8 +32,8 @@ std::optional<std::filesystem::path> environment_path(const char* name) {
     return std::nullopt;
 }
 
-std::optional<std::filesystem::path> first_environment_path(std::initializer_list<const char*> names) {
-    for (const char* name : names) {
+std::optional<std::filesystem::path> first_environment_path(std::initializer_list<const char *> names) {
+    for (const char *name : names) {
         if (const auto path = environment_path(name)) {
             return path;
         }
@@ -41,7 +41,7 @@ std::optional<std::filesystem::path> first_environment_path(std::initializer_lis
     return std::nullopt;
 }
 
-std::filesystem::path absolute_path(const std::filesystem::path& path) {
+std::filesystem::path absolute_path(const std::filesystem::path &path) {
     std::error_code error;
     const std::filesystem::path absolute = std::filesystem::absolute(path, error);
     if (error) {
@@ -50,32 +50,31 @@ std::filesystem::path absolute_path(const std::filesystem::path& path) {
     return absolute.lexically_normal();
 }
 
-bool is_directory_noexcept(const std::filesystem::path& path) {
+bool is_directory_noexcept(const std::filesystem::path &path) {
     std::error_code error;
     return std::filesystem::is_directory(path, error);
 }
 
-bool is_regular_file_noexcept(const std::filesystem::path& path) {
+bool is_regular_file_noexcept(const std::filesystem::path &path) {
     std::error_code error;
     return std::filesystem::is_regular_file(path, error);
 }
 
-bool exists_noexcept(const std::filesystem::path& path) {
+bool exists_noexcept(const std::filesystem::path &path) {
     std::error_code error;
     return std::filesystem::exists(path, error);
 }
 
-std::string normalized_component(const std::filesystem::path& component) {
+std::string normalized_component(const std::filesystem::path &component) {
     std::string value = component.generic_string();
 #if defined(_WIN32)
-    std::transform(value.begin(), value.end(), value.begin(), [](const unsigned char ch) {
-        return static_cast<char>(std::tolower(ch));
-    });
+    std::transform(value.begin(), value.end(), value.begin(),
+                   [](const unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
 #endif
     return value;
 }
 
-bool path_starts_with(const std::filesystem::path& path, const std::filesystem::path& prefix) {
+bool path_starts_with(const std::filesystem::path &path, const std::filesystem::path &prefix) {
     const std::filesystem::path normalized_path = path.lexically_normal();
     const std::filesystem::path normalized_prefix = prefix.lexically_normal();
     auto path_it = normalized_path.begin();
@@ -91,29 +90,21 @@ bool path_starts_with(const std::filesystem::path& path, const std::filesystem::
     return true;
 }
 
-bool reached_exclusive_ceiling(const std::filesystem::path& current,
-                               const std::optional<SearchCeiling>& ceiling) {
-    return ceiling.has_value()
-        && ceiling->mode == SearchCeilingMode::Exclusive
-        && current == ceiling->path;
+bool reached_exclusive_ceiling(const std::filesystem::path &current, const std::optional<SearchCeiling> &ceiling) {
+    return ceiling.has_value() && ceiling->mode == SearchCeilingMode::Exclusive && current == ceiling->path;
 }
 
-bool reached_inclusive_ceiling(const std::filesystem::path& current,
-                               const std::optional<SearchCeiling>& ceiling) {
-    return ceiling.has_value()
-        && ceiling->mode == SearchCeilingMode::Inclusive
-        && current == ceiling->path;
+bool reached_inclusive_ceiling(const std::filesystem::path &current, const std::optional<SearchCeiling> &ceiling) {
+    return ceiling.has_value() && ceiling->mode == SearchCeilingMode::Inclusive && current == ceiling->path;
 }
 
-std::optional<SearchCeiling> search_ceiling(const std::filesystem::path& start) {
+std::optional<SearchCeiling> search_ceiling(const std::filesystem::path &start) {
     const std::filesystem::path absolute_start = absolute_path(start);
 
     std::error_code error;
     const std::filesystem::path temp_root = std::filesystem::temp_directory_path(error);
     const std::filesystem::path absolute_temp_root = absolute_path(temp_root);
-    if (!error
-        && absolute_start != absolute_temp_root
-        && path_starts_with(absolute_start, absolute_temp_root)) {
+    if (!error && absolute_start != absolute_temp_root && path_starts_with(absolute_start, absolute_temp_root)) {
         return SearchCeiling{absolute_temp_root, SearchCeilingMode::Exclusive};
     }
 
@@ -131,9 +122,9 @@ std::optional<SearchCeiling> search_ceiling(const std::filesystem::path& start) 
     return std::nullopt;
 }
 
-}
+} // namespace
 
-std::optional<std::filesystem::path> find_workspace_templates_root(const std::filesystem::path& start) {
+std::optional<std::filesystem::path> find_workspace_templates_root(const std::filesystem::path &start) {
     std::filesystem::path current = absolute_path(start);
     const std::optional<SearchCeiling> ceiling = search_ceiling(current);
 
@@ -146,9 +137,8 @@ std::optional<std::filesystem::path> find_workspace_templates_root(const std::fi
             return current / "templates";
         }
 
-        if (reached_inclusive_ceiling(current, ceiling)
-            || current == current.root_path()
-            || current == current.parent_path()) {
+        if (reached_inclusive_ceiling(current, ceiling) || current == current.root_path() ||
+            current == current.parent_path()) {
             return std::nullopt;
         }
 
@@ -156,7 +146,7 @@ std::optional<std::filesystem::path> find_workspace_templates_root(const std::fi
     }
 }
 
-std::optional<std::filesystem::path> find_workspace_config_file(const std::filesystem::path& start) {
+std::optional<std::filesystem::path> find_workspace_config_file(const std::filesystem::path &start) {
     std::filesystem::path current = absolute_path(start);
     const std::optional<SearchCeiling> ceiling = search_ceiling(current);
 
@@ -170,9 +160,8 @@ std::optional<std::filesystem::path> find_workspace_config_file(const std::files
             return candidate;
         }
 
-        if (reached_inclusive_ceiling(current, ceiling)
-            || current == current.root_path()
-            || current == current.parent_path()) {
+        if (reached_inclusive_ceiling(current, ceiling) || current == current.root_path() ||
+            current == current.parent_path()) {
             return std::nullopt;
         }
 
@@ -228,4 +217,4 @@ std::filesystem::path default_global_config_file_path() {
     return resolve_tempify_config_root() / "config.json";
 }
 
-}
+} // namespace tempify

@@ -1,4 +1,4 @@
-.PHONY: configure build start run test clean analyze lint security static-analysis
+.PHONY: configure build start run test clean analyze lint security static-analysis format format-check
 
 BUILD_DIR ?= build
 CLANG_TIDY_BUILD_DIR := build-cmake/tidy
@@ -39,6 +39,14 @@ security:
 static-analysis:
 	chmod +x scripts/ci/run_clang_tidy.sh
 	./scripts/ci/run_clang_tidy.sh all $(CMAKE_VCPKG_ARGS)
+
+format:
+	chmod +x scripts/ci/run_clang_format.sh
+	./scripts/ci/run_clang_format.sh format
+
+format-check:
+	chmod +x scripts/ci/run_clang_format.sh
+	./scripts/ci/run_clang_format.sh check
 
 clean:
 	rm -rf $(BUILD_DIR) build-cmake

@@ -5,15 +5,15 @@
 
 namespace {
 
+using tempify::test_support::create_basic_template_at;
 using tempify::test_support::ScopedCurrentPath;
 using tempify::test_support::ScopedDirectoryCleanup;
 using tempify::test_support::ScopedStdoutCapture;
 using tempify::test_support::ScopedTempifyDataHome;
-using tempify::test_support::create_basic_template_at;
 using tempify::test_support::write_available_template_cache;
 using tempify::test_support::write_text_file;
 
-}
+} // namespace
 
 TEST_CASE(TempifyApp_refresh_creates_shared_index_without_templates) {
     ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-refresh-empty-data-home");
@@ -336,13 +336,11 @@ TEST_CASE(TempifyApp_completion_outputs_shell_scripts) {
 
 TEST_CASE(TempifyApp_broken_workspace_template_gets_skipped_while_valid_template_remains_visible) {
     ScopedDirectoryCleanup workspace(std::filesystem::temp_directory_path() / "tempify-app-broken-workspace-skip");
-    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-broken-workspace-skip-data-home");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() /
+                                    "tempify-app-broken-workspace-skip-data-home");
     std::filesystem::create_directories(workspace.path() / "templates");
     static_cast<void>(create_basic_template_at(workspace.path() / "templates" / "visible_workspace",
-                                               "visible_workspace",
-                                               "Visible Workspace",
-                                               "1.0.0",
-                                               "Visible desc",
+                                               "visible_workspace", "Visible Workspace", "1.0.0", "Visible desc",
                                                "VISIBLE WORKSPACE\n"));
     std::filesystem::create_directories(workspace.path() / "templates" / "broken_workspace");
     write_text_file(workspace.path() / "templates" / "broken_workspace" / "questions.lua", "return {}\n");
@@ -366,18 +364,13 @@ TEST_CASE(TempifyApp_broken_workspace_template_gets_skipped_while_valid_template
 
 TEST_CASE(TempifyApp_duplicate_workspace_template_ids_are_rejected) {
     ScopedDirectoryCleanup workspace(std::filesystem::temp_directory_path() / "tempify-app-duplicate-workspace-id");
-    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-duplicate-workspace-id-data-home");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() /
+                                    "tempify-app-duplicate-workspace-id-data-home");
     std::filesystem::create_directories(workspace.path() / "templates");
-    static_cast<void>(create_basic_template_at(workspace.path() / "templates" / "alpha",
-                                               "dup_workspace",
-                                               "Alpha",
-                                               "1.0.0",
-                                               "Alpha desc"));
-    static_cast<void>(create_basic_template_at(workspace.path() / "templates" / "beta",
-                                               "dup_workspace",
-                                               "Beta",
-                                               "1.0.0",
-                                               "Beta desc"));
+    static_cast<void>(create_basic_template_at(workspace.path() / "templates" / "alpha", "dup_workspace", "Alpha",
+                                               "1.0.0", "Alpha desc"));
+    static_cast<void>(create_basic_template_at(workspace.path() / "templates" / "beta", "dup_workspace", "Beta",
+                                               "1.0.0", "Beta desc"));
     ScopedCurrentPath cwd(workspace.path());
 
     tempify::TempifyApp app;
@@ -385,28 +378,28 @@ TEST_CASE(TempifyApp_duplicate_workspace_template_ids_are_rejected) {
 }
 
 TEST_CASE(TempifyApp_list_json_includes_available_cached_templates) {
-    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-available-cache-list-data-home");
-    write_available_template_cache(data_home.shared_root(),
-                                   "{\n"
-                                   "  \"schemaVersion\": 1,\n"
-                                   "  \"templates\": [\n"
-                                   "    {\n"
-                                   "      \"id\": \"java-xyz\",\n"
-                                   "      \"name\": \"Java XYZ\",\n"
-                                   "      \"description\": \"Small Java starter template\",\n"
-                                   "      \"version\": \"0.1.0\",\n"
-                                   "      \"tags\": [\"java\", \"starter\"],\n"
-                                   "      \"source\": {\n"
-                                   "        \"type\": \"git\",\n"
-                                   "        \"url\": \"../tempify-templates\",\n"
-                                   "        \"subdir\": \"java-xyz\"\n"
-                                   "      },\n"
-                                   "      \"repository\": {\n"
-                                   "        \"id\": \"local-registry\"\n"
-                                   "      }\n"
-                                   "    }\n"
-                                   "  ]\n"
-                                   "}\n");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() /
+                                    "tempify-app-available-cache-list-data-home");
+    write_available_template_cache(data_home.shared_root(), "{\n"
+                                                            "  \"schemaVersion\": 1,\n"
+                                                            "  \"templates\": [\n"
+                                                            "    {\n"
+                                                            "      \"id\": \"java-xyz\",\n"
+                                                            "      \"name\": \"Java XYZ\",\n"
+                                                            "      \"description\": \"Small Java starter template\",\n"
+                                                            "      \"version\": \"0.1.0\",\n"
+                                                            "      \"tags\": [\"java\", \"starter\"],\n"
+                                                            "      \"source\": {\n"
+                                                            "        \"type\": \"git\",\n"
+                                                            "        \"url\": \"../tempify-templates\",\n"
+                                                            "        \"subdir\": \"java-xyz\"\n"
+                                                            "      },\n"
+                                                            "      \"repository\": {\n"
+                                                            "        \"id\": \"local-registry\"\n"
+                                                            "      }\n"
+                                                            "    }\n"
+                                                            "  ]\n"
+                                                            "}\n");
 
     tempify::TempifyApp app;
     ScopedStdoutCapture capture;
@@ -420,19 +413,19 @@ TEST_CASE(TempifyApp_list_json_includes_available_cached_templates) {
 }
 
 TEST_CASE(TempifyApp_list_prefers_workspace_template_over_available_cache_duplicate) {
-    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-available-cache-override-data-home");
-    write_available_template_cache(data_home.shared_root(),
-                                   "{\n"
-                                   "  \"schemaVersion\": 1,\n"
-                                   "  \"templates\": [\n"
-                                   "    {\n"
-                                   "      \"id\": \"basic_cpp\",\n"
-                                   "      \"name\": \"Cached Basic\",\n"
-                                   "      \"description\": \"Cached desc\",\n"
-                                   "      \"version\": \"9.9.9\"\n"
-                                   "    }\n"
-                                   "  ]\n"
-                                   "}\n");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() /
+                                    "tempify-app-available-cache-override-data-home");
+    write_available_template_cache(data_home.shared_root(), "{\n"
+                                                            "  \"schemaVersion\": 1,\n"
+                                                            "  \"templates\": [\n"
+                                                            "    {\n"
+                                                            "      \"id\": \"basic_cpp\",\n"
+                                                            "      \"name\": \"Cached Basic\",\n"
+                                                            "      \"description\": \"Cached desc\",\n"
+                                                            "      \"version\": \"9.9.9\"\n"
+                                                            "    }\n"
+                                                            "  ]\n"
+                                                            "}\n");
 
     tempify::TempifyApp app;
     ScopedStdoutCapture capture;
@@ -446,28 +439,28 @@ TEST_CASE(TempifyApp_list_prefers_workspace_template_over_available_cache_duplic
 }
 
 TEST_CASE(TempifyApp_info_json_falls_back_to_available_cache_metadata) {
-    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-available-cache-info-data-home");
-    write_available_template_cache(data_home.shared_root(),
-                                   "{\n"
-                                   "  \"schemaVersion\": 1,\n"
-                                   "  \"templates\": [\n"
-                                   "    {\n"
-                                   "      \"id\": \"java-xyz\",\n"
-                                   "      \"name\": \"Java XYZ\",\n"
-                                   "      \"description\": \"Small Java starter template\",\n"
-                                   "      \"version\": \"0.1.0\",\n"
-                                   "      \"source\": {\n"
-                                   "        \"type\": \"git\",\n"
-                                   "        \"url\": \"../tempify-templates\",\n"
-                                   "        \"ref\": \"main\",\n"
-                                   "        \"subdir\": \"java-xyz\"\n"
-                                   "      },\n"
-                                   "      \"repository\": {\n"
-                                   "        \"id\": \"local-registry\"\n"
-                                   "      }\n"
-                                   "    }\n"
-                                   "  ]\n"
-                                   "}\n");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() /
+                                    "tempify-app-available-cache-info-data-home");
+    write_available_template_cache(data_home.shared_root(), "{\n"
+                                                            "  \"schemaVersion\": 1,\n"
+                                                            "  \"templates\": [\n"
+                                                            "    {\n"
+                                                            "      \"id\": \"java-xyz\",\n"
+                                                            "      \"name\": \"Java XYZ\",\n"
+                                                            "      \"description\": \"Small Java starter template\",\n"
+                                                            "      \"version\": \"0.1.0\",\n"
+                                                            "      \"source\": {\n"
+                                                            "        \"type\": \"git\",\n"
+                                                            "        \"url\": \"../tempify-templates\",\n"
+                                                            "        \"ref\": \"main\",\n"
+                                                            "        \"subdir\": \"java-xyz\"\n"
+                                                            "      },\n"
+                                                            "      \"repository\": {\n"
+                                                            "        \"id\": \"local-registry\"\n"
+                                                            "      }\n"
+                                                            "    }\n"
+                                                            "  ]\n"
+                                                            "}\n");
 
     tempify::TempifyApp app;
     ScopedStdoutCapture capture;

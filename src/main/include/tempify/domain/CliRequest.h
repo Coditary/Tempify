@@ -85,4 +85,4 @@ struct CliRequest {
     std::optional<HelpTopic> help_topic;
 };
 
-}
+} // namespace tempify

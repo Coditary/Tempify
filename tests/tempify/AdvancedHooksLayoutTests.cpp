@@ -1,6 +1,5 @@
-#include "TestHarness.h"
 #include "TempifyTestSupport.h"
-
+#include "TestHarness.h"
 #include "tempify/app/TempifyApp.h"
 #include "tempify/lua/LuaEngine.h"
 #include "tempify/template/TemplateLoader.h"
@@ -13,9 +12,8 @@
 namespace {
 
 class ScopedDirectoryCleanup {
-public:
-    explicit ScopedDirectoryCleanup(std::filesystem::path path)
-        : path_(std::move(path)) {
+  public:
+    explicit ScopedDirectoryCleanup(std::filesystem::path path) : path_(std::move(path)) {
         std::filesystem::remove_all(path_);
     }
 
@@ -23,32 +21,38 @@ public:
         std::filesystem::remove_all(path_);
     }
 
-    const std::filesystem::path& path() const noexcept { return path_; }
+    const std::filesystem::path &path() const noexcept {
+        return path_;
+    }
 
-private:
+  private:
     std::filesystem::path path_;
 };
 
-std::string read_text_file(const std::filesystem::path& path) {
+std::string read_text_file(const std::filesystem::path &path) {
     std::ifstream input(path, std::ios::binary);
     std::ostringstream stream;
     stream << input.rdbuf();
     return stream.str();
 }
 
-}
+} // namespace
 
 TEST_CASE(TempifyApp_advanced_hooks_layout_scripts_and_hook_lifecycle_work) {
     ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-advanced-hooks-layout-test");
     tempify::TempifyApp app;
 
     REQUIRE_EQ(app.run({
-        "advanced_hooks_layout",
-        target.path().string(),
-        "--set", "project_name=Advanced Demo",
-        "--set", "project_slug=advanced-demo",
-        "--set", "use_notes=false",
-    }), 0);
+                   "advanced_hooks_layout",
+                   target.path().string(),
+                   "--set",
+                   "project_name=Advanced Demo",
+                   "--set",
+                   "project_slug=advanced-demo",
+                   "--set",
+                   "use_notes=false",
+               }),
+               0);
 
     REQUIRE(std::filesystem::exists(target.path() / "README.md"));
     REQUIRE(std::filesystem::exists(target.path() / "static" / "output.txt"));
@@ -69,8 +73,8 @@ TEST_CASE(LuaEngine_export_questions_json_returns_minimal_question_payload) {
 
     const std::filesystem::path template_root = tempify::test_support::test_template_path("advanced_hooks_layout");
     const tempify::TemplateManifest manifest = loader.load(template_root, {
-        {"advanced_hooks_layout", template_root},
-    });
+                                                                              {"advanced_hooks_layout", template_root},
+                                                                          });
 
     const std::string json = lua_engine.export_questions_json(manifest);
     REQUIRE(json.find("\"template\"") != std::string::npos);
@@ -88,8 +92,8 @@ TEST_CASE(LuaEngine_export_questions_json_full_keeps_empty_fields) {
 
     const std::filesystem::path template_root = tempify::test_support::test_template_path("advanced_hooks_layout");
     const tempify::TemplateManifest manifest = loader.load(template_root, {
-        {"advanced_hooks_layout", template_root},
-    });
+                                                                              {"advanced_hooks_layout", template_root},
+                                                                          });
 
     const std::string json = lua_engine.export_questions_json(manifest, true);
     REQUIRE(json.find("\"choices\": []") != std::string::npos);
@@ -131,8 +135,8 @@ TEST_CASE(LuaEngine_export_questions_json_includes_sensitive_flag) {
     tempify::LuaEngine lua_engine;
     tempify::TemplateLoader loader(lua_engine);
     const tempify::TemplateManifest manifest = loader.load(template_root, {
-        {"sensitive_tpl", template_root},
-    });
+                                                                              {"sensitive_tpl", template_root},
+                                                                          });
 
     REQUIRE(manifest.questions.size() == static_cast<std::size_t>(1));
     REQUIRE(manifest.questions.front().sensitive);

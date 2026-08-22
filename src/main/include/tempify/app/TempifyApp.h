@@ -6,8 +6,8 @@
 namespace tempify {
 
 class TempifyApp {
-public:
-    int run(const std::vector<std::string>& args) const;
+  public:
+    int run(const std::vector<std::string> &args) const;
 };
 
-}
+} // namespace tempify

@@ -160,9 +160,9 @@ complete -c tempify -n "__fish_seen_subcommand_from reapply" -s s -l skip-if-fil
 )FISH";
 }
 
-}
+} // namespace
 
-std::string render_shell_completion(const std::string& shell) {
+std::string render_shell_completion(const std::string &shell) {
     if (shell == "bash") {
         return bash_completion();
     }
@@ -175,4 +175,4 @@ std::string render_shell_completion(const std::string& shell) {
     throw TempifyError("Invalid shell for `completion`: " + shell + ". Expected bash, zsh, or fish.");
 }
 
-}
+} // namespace tempify

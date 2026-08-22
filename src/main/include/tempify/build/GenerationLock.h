@@ -32,7 +32,7 @@ struct GenerationLockRecord {
 };
 
 std::string content_fingerprint_hex(std::string_view value);
-std::map<std::string, std::string> build_generation_lock_managed_file_hashes(const BuildPlan& plan);
-std::optional<GenerationLockRecord> load_generation_lock(const std::filesystem::path& path);
+std::map<std::string, std::string> build_generation_lock_managed_file_hashes(const BuildPlan &plan);
+std::optional<GenerationLockRecord> load_generation_lock(const std::filesystem::path &path);
 
-}
+} // namespace tempify

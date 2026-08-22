@@ -8,7 +8,7 @@ namespace prebyte::test {
 
 namespace {
 
-bool set_environment_variable(const std::string& name, const std::string& value) {
+bool set_environment_variable(const std::string &name, const std::string &value) {
 #ifdef _WIN32
     return _putenv_s(name.c_str(), value.c_str()) == 0;
 #else
@@ -16,7 +16,7 @@ bool set_environment_variable(const std::string& name, const std::string& value)
 #endif
 }
 
-bool unset_environment_variable(const std::string& name) {
+bool unset_environment_variable(const std::string &name) {
 #ifdef _WIN32
     return _putenv_s(name.c_str(), "") == 0;
 #else
@@ -24,15 +24,15 @@ bool unset_environment_variable(const std::string& name) {
 #endif
 }
 
-}
+} // namespace
 
-std::vector<TestCase>& registry() {
+std::vector<TestCase> &registry() {
     static std::vector<TestCase> tests;
     return tests;
 }
 
-const TestCase* find_test(std::string_view name) {
-    for (const TestCase& test_case : registry()) {
+const TestCase *find_test(std::string_view name) {
+    for (const TestCase &test_case : registry()) {
         if (test_case.name == name) {
             return &test_case;
         }
@@ -43,7 +43,7 @@ const TestCase* find_test(std::string_view name) {
 std::vector<std::string> test_names() {
     std::vector<std::string> names;
     names.reserve(registry().size());
-    for (const TestCase& test_case : registry()) {
+    for (const TestCase &test_case : registry()) {
         names.push_back(test_case.name);
     }
     return names;
@@ -53,12 +53,10 @@ TestRegistrar::TestRegistrar(std::string name, TestFunction function) {
     registry().push_back(TestCase{std::move(name), function});
 }
 
-AssertionFailure::AssertionFailure(const std::string& message)
-    : std::runtime_error(message) {}
+AssertionFailure::AssertionFailure(const std::string &message) : std::runtime_error(message) {}
 
-ScopedEnvironmentVariable::ScopedEnvironmentVariable(std::string name, std::string value)
-    : name_(std::move(name)) {
-    if (const char* current = std::getenv(name_.c_str())) {
+ScopedEnvironmentVariable::ScopedEnvironmentVariable(std::string name, std::string value) : name_(std::move(name)) {
+    if (const char *current = std::getenv(name_.c_str())) {
         previous_value_ = current;
     }
     if (!set_environment_variable(name_, value)) {
@@ -76,11 +74,11 @@ ScopedEnvironmentVariable::~ScopedEnvironmentVariable() {
 
 int run_all_tests() {
     int failed = 0;
-    for (const TestCase& test_case : registry()) {
+    for (const TestCase &test_case : registry()) {
         try {
             test_case.function();
             std::cout << "[PASS] " << test_case.name << '\n';
-        } catch (const std::exception& error) {
+        } catch (const std::exception &error) {
             ++failed;
             std::cerr << "[FAIL] " << test_case.name << " - " << error.what() << '\n';
         }
@@ -90,7 +88,7 @@ int run_all_tests() {
 }
 
 int run_test_by_name(std::string_view name) {
-    const TestCase* test_case = find_test(name);
+    const TestCase *test_case = find_test(name);
     if (test_case == nullptr) {
         std::cerr << "[FAIL] Unknown test: " << name << '\n';
         return 1;
@@ -100,10 +98,10 @@ int run_test_by_name(std::string_view name) {
         test_case->function();
         std::cout << "[PASS] " << test_case->name << '\n';
         return 0;
-    } catch (const std::exception& error) {
+    } catch (const std::exception &error) {
         std::cerr << "[FAIL] " << test_case->name << " - " << error.what() << '\n';
         return 1;
     }
 }
 
-}
+} // namespace prebyte::test

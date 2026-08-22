@@ -16,4 +16,4 @@ enum class HookAcceptance {
     No,
 };
 
-}
+} // namespace tempify

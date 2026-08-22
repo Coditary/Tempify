@@ -5,14 +5,14 @@
 
 namespace {
 
-using tempify::test_support::ScopedDirectoryCleanup;
-using tempify::test_support::ScopedStdoutCapture;
-using tempify::test_support::ScopedTempifyDataHome;
 using tempify::test_support::create_bad_layout_template;
 using tempify::test_support::create_duplicate_alias_template;
 using tempify::test_support::create_sensitive_template;
+using tempify::test_support::ScopedDirectoryCleanup;
+using tempify::test_support::ScopedStdoutCapture;
+using tempify::test_support::ScopedTempifyDataHome;
 
-}
+} // namespace
 
 TEST_CASE(TempifyApp_validate_accepts_valid_template) {
     ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-validate-valid-data-home");
@@ -35,7 +35,8 @@ TEST_CASE(TempifyApp_validate_json_outputs_machine_readable_result) {
 }
 
 TEST_CASE(TempifyApp_validate_rejects_duplicate_alias_conflict) {
-    ScopedDirectoryCleanup template_root(std::filesystem::temp_directory_path() / "tempify-app-validate-alias-template");
+    ScopedDirectoryCleanup template_root(std::filesystem::temp_directory_path() /
+                                         "tempify-app-validate-alias-template");
     ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-validate-alias-data-home");
     const std::filesystem::path template_path = create_duplicate_alias_template(template_root.path());
     tempify::TempifyApp app;
@@ -44,7 +45,8 @@ TEST_CASE(TempifyApp_validate_rejects_duplicate_alias_conflict) {
 }
 
 TEST_CASE(TempifyApp_validate_rejects_missing_layout_source) {
-    ScopedDirectoryCleanup template_root(std::filesystem::temp_directory_path() / "tempify-app-validate-layout-template");
+    ScopedDirectoryCleanup template_root(std::filesystem::temp_directory_path() /
+                                         "tempify-app-validate-layout-template");
     ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-validate-layout-data-home");
     const std::filesystem::path template_path = create_bad_layout_template(template_root.path());
     tempify::TempifyApp app;
@@ -85,7 +87,8 @@ TEST_CASE(TempifyApp_inspect_json_outputs_machine_readable_report) {
 }
 
 TEST_CASE(TempifyApp_inspect_json_includes_sensitive_question_metadata) {
-    ScopedDirectoryCleanup workspace(std::filesystem::temp_directory_path() / "tempify-app-sensitive-inspect-workspace");
+    ScopedDirectoryCleanup workspace(std::filesystem::temp_directory_path() /
+                                     "tempify-app-sensitive-inspect-workspace");
     ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-sensitive-inspect-data-home");
     const std::filesystem::path template_root = create_sensitive_template(workspace.path());
     tempify::TempifyApp app;

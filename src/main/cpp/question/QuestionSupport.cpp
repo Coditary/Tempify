@@ -1,12 +1,11 @@
 #include "QuestionProcessorInternal.h"
-
 #include "tempify/frontend/IQuestionFrontend.h"
 #include "tempify/lua/LuaEngine.h"
 #include "tempify/support/Errors.h"
 
 #include <algorithm>
-#include <charconv>
 #include <cctype>
+#include <charconv>
 #include <sstream>
 #include <string_view>
 #include <utility>
@@ -17,14 +16,14 @@ namespace {
 
 constexpr std::string_view kRedactedValue = "<redacted>";
 
-std::string validation_feedback_for(const QuestionDefinition& question) {
+std::string validation_feedback_for(const QuestionDefinition &question) {
     if (question.sensitive) {
         return std::string("Invalid value for '") + question.key + "'";
     }
     return {};
 }
 
-}
+} // namespace
 
 std::string trim(std::string value) {
     const auto is_space = [](const unsigned char ch) { return std::isspace(ch) != 0; };
@@ -38,30 +37,27 @@ std::string trim(std::string value) {
 }
 
 std::string to_lower_copy(std::string value) {
-    std::transform(value.begin(), value.end(), value.begin(), [](const unsigned char ch) {
-        return static_cast<char>(std::tolower(ch));
-    });
+    std::transform(value.begin(), value.end(), value.begin(),
+                   [](const unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
     return value;
 }
 
-bool is_question_key(const std::vector<QuestionDefinition>& questions, const std::string& key) {
-    return std::ranges::any_of(questions, [&](const QuestionDefinition& question) {
-        return question.key == key;
-    });
+bool is_question_key(const std::vector<QuestionDefinition> &questions, const std::string &key) {
+    return std::ranges::any_of(questions, [&](const QuestionDefinition &question) { return question.key == key; });
 }
 
-std::map<std::string, std::string> normalize_assignments(const std::map<std::string, std::string>& raw_values,
-                                                         const std::vector<QuestionDefinition>& questions,
-                                                         const std::string& source_name) {
+std::map<std::string, std::string> normalize_assignments(const std::map<std::string, std::string> &raw_values,
+                                                         const std::vector<QuestionDefinition> &questions,
+                                                         const std::string &source_name) {
     std::map<std::string, std::string> alias_to_key;
-    for (const auto& question : questions) {
-        for (const auto& alias : question.aliases) {
+    for (const auto &question : questions) {
+        for (const auto &alias : question.aliases) {
             alias_to_key[alias] = question.key;
         }
     }
 
     std::map<std::string, std::string> normalized;
-    for (const auto& [raw_key, value] : raw_values) {
+    for (const auto &[raw_key, value] : raw_values) {
         const std::string key = alias_to_key.contains(raw_key) ? alias_to_key.at(raw_key) : raw_key;
         const auto existing = normalized.find(key);
         if (existing != normalized.end() && existing->second != value) {
@@ -73,14 +69,13 @@ std::map<std::string, std::string> normalize_assignments(const std::map<std::str
     return normalized;
 }
 
-void propagate_aliases(std::map<std::string, std::string>& values,
-                       const std::vector<QuestionDefinition>& questions) {
-    for (const auto& question : questions) {
+void propagate_aliases(std::map<std::string, std::string> &values, const std::vector<QuestionDefinition> &questions) {
+    for (const auto &question : questions) {
         const auto it = values.find(question.key);
         if (it == values.end()) {
             continue;
         }
-        for (const auto& alias : question.aliases) {
+        for (const auto &alias : question.aliases) {
             const auto existing = values.find(alias);
             if (existing != values.end() && existing->second != it->second) {
                 throw TempifyError("Alias conflict for '" + alias + "'");
@@ -90,11 +85,11 @@ void propagate_aliases(std::map<std::string, std::string>& values,
     }
 }
 
-std::optional<std::string> default_value_for(const QuestionDefinition& question,
-                                             const std::map<std::string, std::string>& env_values,
-                                             const std::map<std::string, std::string>& config_values,
-                                             const std::map<std::string, std::string>& current_values,
-                                             const LuaEngine& lua_engine) {
+std::optional<std::string> default_value_for(const QuestionDefinition &question,
+                                             const std::map<std::string, std::string> &env_values,
+                                             const std::map<std::string, std::string> &config_values,
+                                             const std::map<std::string, std::string> &current_values,
+                                             const LuaEngine &lua_engine) {
     const auto config_value = config_values.find(question.key);
     if (config_value != config_values.end()) {
         return config_value->second;
@@ -112,7 +107,7 @@ std::optional<std::string> default_value_for(const QuestionDefinition& question,
     return question.default_value;
 }
 
-std::string display_default_value(const QuestionDefinition& question, const std::string& value) {
+std::string display_default_value(const QuestionDefinition &question, const std::string &value) {
     if (question.sensitive) {
         return std::string(kRedactedValue);
     }
@@ -123,7 +118,7 @@ std::string display_default_value(const QuestionDefinition& question, const std:
     return value;
 }
 
-std::string parse_bool_value(const std::string& input) {
+std::string parse_bool_value(const std::string &input) {
     const std::string lowered = to_lower_copy(trim(input));
     if (lowered == "true" || lowered == "1" || lowered == "yes" || lowered == "y" || lowered == "on") {
         return "true";
@@ -135,7 +130,7 @@ std::string parse_bool_value(const std::string& input) {
     throw TempifyError("Expected boolean value (yes/no, true/false, 1/0)");
 }
 
-std::string parse_int_value(const std::string& input) {
+std::string parse_int_value(const std::string &input) {
     const std::string trimmed = trim(input);
     if (trimmed.empty()) {
         throw TempifyError("Expected integer value");
@@ -150,7 +145,7 @@ std::string parse_int_value(const std::string& input) {
     return std::to_string(value);
 }
 
-std::string parse_choice_value(const QuestionDefinition& question, const std::string& input) {
+std::string parse_choice_value(const QuestionDefinition &question, const std::string &input) {
     const std::string trimmed = trim(input);
     if (trimmed.empty()) {
         throw TempifyError("Expected choice value");
@@ -163,9 +158,7 @@ std::string parse_choice_value(const QuestionDefinition& question, const std::st
 
     int index = 0;
     const auto [ptr, ec] = std::from_chars(trimmed.data(), trimmed.data() + trimmed.size(), index);
-    if (ec == std::errc{} &&
-        ptr == trimmed.data() + trimmed.size() &&
-        index >= 1 &&
+    if (ec == std::errc{} && ptr == trimmed.data() + trimmed.size() && index >= 1 &&
         static_cast<std::size_t>(index) <= question.choices.size()) {
         return question.choices[static_cast<std::size_t>(index - 1)];
     }
@@ -173,7 +166,7 @@ std::string parse_choice_value(const QuestionDefinition& question, const std::st
     throw TempifyError("Expected one of configured choices");
 }
 
-std::string coerce_value(const QuestionDefinition& question, const std::string& raw_value) {
+std::string coerce_value(const QuestionDefinition &question, const std::string &raw_value) {
     const std::string type = to_lower_copy(question.type);
     if (type == "string") {
         return raw_value;
@@ -194,7 +187,7 @@ std::string coerce_value(const QuestionDefinition& question, const std::string& 
     throw TempifyError("Unsupported question type: " + question.type);
 }
 
-std::string prompt_text_for(const QuestionDefinition& question, const std::optional<std::string>& default_value) {
+std::string prompt_text_for(const QuestionDefinition &question, const std::optional<std::string> &default_value) {
     std::ostringstream stream;
     stream << (question.prompt.empty() ? question.key : question.prompt);
 
@@ -221,12 +214,11 @@ std::string prompt_text_for(const QuestionDefinition& question, const std::optio
     return stream.str();
 }
 
-std::optional<std::string> ask_question(const QuestionDefinition& question,
-                                        const std::optional<std::string>& default_value,
-                                        std::map<std::string, std::string>& values,
-                                        const std::vector<QuestionDefinition>& questions,
-                                        const LuaEngine& lua_engine,
-                                        IQuestionFrontend& frontend) {
+std::optional<std::string> ask_question(const QuestionDefinition &question,
+                                        const std::optional<std::string> &default_value,
+                                        std::map<std::string, std::string> &values,
+                                        const std::vector<QuestionDefinition> &questions, const LuaEngine &lua_engine,
+                                        IQuestionFrontend &frontend) {
     while (true) {
         const auto input = frontend.prompt(prompt_text_for(question, default_value), question.sensitive);
         if (!input.has_value()) {
@@ -266,7 +258,7 @@ std::optional<std::string> ask_question(const QuestionDefinition& question,
 
         try {
             candidate = coerce_value(question, candidate);
-        } catch (const TempifyError& error) {
+        } catch (const TempifyError &error) {
             frontend.write_line(error.what());
             continue;
         }
@@ -289,4 +281,4 @@ std::optional<std::string> ask_question(const QuestionDefinition& question,
     }
 }
 
-}
+} // namespace tempify::question_internal

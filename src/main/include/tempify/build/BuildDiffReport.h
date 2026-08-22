@@ -111,12 +111,10 @@ struct BuildDiffReport {
     std::vector<BuildDiffEntry> entries;
 };
 
-BuildDiffReport build_diff_report(const BuildPlan& plan,
-                                  const TemplateManifest& manifest,
-                                  const std::map<std::string, std::string>& values,
-                                  const PrebyteRenderer& renderer);
+BuildDiffReport build_diff_report(const BuildPlan &plan, const TemplateManifest &manifest,
+                                  const std::map<std::string, std::string> &values, const PrebyteRenderer &renderer);
 
-std::string format_build_diff_text(const BuildDiffReport& report);
-std::string format_build_diff_json(const BuildDiffReport& report);
+std::string format_build_diff_text(const BuildDiffReport &report);
+std::string format_build_diff_json(const BuildDiffReport &report);
 
-}
+} // namespace tempify

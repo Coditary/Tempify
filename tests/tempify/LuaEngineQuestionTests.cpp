@@ -1,6 +1,5 @@
-#include "TestHarness.h"
 #include "TempifyTestSupport.h"
-
+#include "TestHarness.h"
 #include "tempify/lua/LuaEngine.h"
 
 #include <filesystem>
@@ -9,8 +8,8 @@
 
 namespace {
 
-tempify::QuestionDefinition find_question(const tempify::TemplateManifest& manifest, const std::string& key) {
-    for (const auto& question : manifest.questions) {
+tempify::QuestionDefinition find_question(const tempify::TemplateManifest &manifest, const std::string &key) {
+    for (const auto &question : manifest.questions) {
         if (question.key == key) {
             return question;
         }
@@ -23,7 +22,7 @@ tempify::TemplateManifest load_basic_cpp_manifest() {
     return lua_engine.load_partial_manifest(tempify::test_support::test_template_path("basic_cpp"));
 }
 
-}
+} // namespace
 
 TEST_CASE(LuaEngine_evaluate_default_condition_and_validate_for_questions) {
     tempify::LuaEngine lua_engine;

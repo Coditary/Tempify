@@ -16,7 +16,7 @@ namespace {
 #if !defined(_WIN32)
 using TerminalState = termios;
 
-void restore_terminal_echo(const std::optional<TerminalState>& original) {
+void restore_terminal_echo(const std::optional<TerminalState> &original) {
     if (original.has_value()) {
         tcsetattr(STDIN_FILENO, TCSANOW, &*original);
         std::cout << '\n';
@@ -44,7 +44,7 @@ std::optional<TerminalState> disable_terminal_echo(const bool sensitive) {
 #else
 struct TerminalState {};
 
-void restore_terminal_echo(const std::optional<TerminalState>& original) {
+void restore_terminal_echo(const std::optional<TerminalState> &original) {
     static_cast<void>(original);
 }
 
@@ -54,9 +54,9 @@ std::optional<TerminalState> disable_terminal_echo(const bool sensitive) {
 }
 #endif
 
-}
+} // namespace
 
-std::optional<PromptResult> WizardFrontend::prompt(const std::string& text, const bool sensitive) {
+std::optional<PromptResult> WizardFrontend::prompt(const std::string &text, const bool sensitive) {
     std::cout << text;
     std::cout.flush();
 
@@ -78,11 +78,11 @@ std::optional<PromptResult> WizardFrontend::prompt(const std::string& text, cons
     return PromptResult{.action = FrontendAction::Submit, .value = line};
 }
 
-void WizardFrontend::write_line(const std::string& text) {
+void WizardFrontend::write_line(const std::string &text) {
     std::cout << text << '\n';
 }
 
-void WizardFrontend::begin_group(const std::string& name, const std::size_t index, const std::size_t total) {
+void WizardFrontend::begin_group(const std::string &name, const std::size_t index, const std::size_t total) {
     std::cout << "\n";
     std::cout << "========================================\n";
     std::cout << "Page " << index << '/' << total;
@@ -99,4 +99,4 @@ void WizardFrontend::end_group() {
     std::cout << "----------------------------------------\n";
 }
 
-}
+} // namespace tempify

@@ -41,4 +41,4 @@ struct BuildPlanReport {
     std::vector<std::string> hooks;
 };
 
-}
+} // namespace tempify

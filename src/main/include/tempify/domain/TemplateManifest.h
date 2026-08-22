@@ -92,4 +92,4 @@ struct TemplateManifest {
     std::optional<std::filesystem::path> post_hook_path;
 };
 
-}
+} // namespace tempify

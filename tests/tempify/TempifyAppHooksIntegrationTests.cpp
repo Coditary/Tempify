@@ -5,16 +5,16 @@
 
 namespace {
 
+using tempify::test_support::create_slow_hook_template;
+using tempify::test_support::json_escaped_path;
+using tempify::test_support::read_text_file;
 using tempify::test_support::ScopedDirectoryCleanup;
 using tempify::test_support::ScopedStdinCapture;
 using tempify::test_support::ScopedStdoutCapture;
 using tempify::test_support::ScopedTempifyDataHome;
-using tempify::test_support::create_slow_hook_template;
-using tempify::test_support::json_escaped_path;
-using tempify::test_support::read_text_file;
 using tempify::test_support::test_template_path;
 
-}
+} // namespace
 
 TEST_CASE(TempifyApp_no_hooks_skips_hook_side_effects) {
     ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-app-no-hooks-test");
@@ -24,10 +24,14 @@ TEST_CASE(TempifyApp_no_hooks_skips_hook_side_effects) {
     const int result = app.run({
         "advanced_hooks_layout",
         target.path().string(),
-        "--accept-hooks", "no",
-        "--set", "project_name=No Hooks",
-        "--set", "project_slug=no-hooks",
-        "--set", "use_notes=false",
+        "--accept-hooks",
+        "no",
+        "--set",
+        "project_name=No Hooks",
+        "--set",
+        "project_slug=no-hooks",
+        "--set",
+        "use_notes=false",
     });
 
     REQUIRE_EQ(result, 0);
@@ -48,10 +52,14 @@ TEST_CASE(TempifyApp_accept_hooks_ask_without_tty_runs_hooks) {
     const int result = app.run({
         "advanced_hooks_layout",
         target.path().string(),
-        "--accept-hooks", "ask",
-        "--set", "project_name=Ask Hooks",
-        "--set", "project_slug=ask-hooks",
-        "--set", "use_notes=false",
+        "--accept-hooks",
+        "ask",
+        "--set",
+        "project_name=Ask Hooks",
+        "--set",
+        "project_slug=ask-hooks",
+        "--set",
+        "use_notes=false",
     });
 
     REQUIRE_EQ(result, 0);
@@ -72,13 +80,18 @@ TEST_CASE(TempifyApp_accept_hooks_ask_tty_shows_summary_and_persists_trust) {
         ScopedStdinCapture input("yes\n");
         ScopedStdoutCapture capture;
         REQUIRE_EQ(app.run({
-            "advanced_hooks_layout",
-            target.path().string(),
-            "--accept-hooks", "ask",
-            "--set", "project_name=Trusted Hooks",
-            "--set", "project_slug=trusted-hooks",
-            "--set", "use_notes=false",
-        }), 0);
+                       "advanced_hooks_layout",
+                       target.path().string(),
+                       "--accept-hooks",
+                       "ask",
+                       "--set",
+                       "project_name=Trusted Hooks",
+                       "--set",
+                       "project_slug=trusted-hooks",
+                       "--set",
+                       "use_notes=false",
+                   }),
+                   0);
         const std::string output = capture.str();
         REQUIRE(output.find("Template defines hooks:") != std::string::npos);
         REQUIRE(output.find("- pre: ") != std::string::npos);
@@ -90,21 +103,29 @@ TEST_CASE(TempifyApp_accept_hooks_ask_tty_shows_summary_and_persists_trust) {
 
     const std::filesystem::path trust_store = data_home.shared_root() / "trust" / "hooks.json";
     REQUIRE(std::filesystem::is_regular_file(trust_store));
-    REQUIRE(read_text_file(trust_store).find(json_escaped_path(std::filesystem::weakly_canonical(test_template_path("advanced_hooks_layout")))) != std::string::npos);
+    REQUIRE(read_text_file(trust_store)
+                .find(json_escaped_path(std::filesystem::weakly_canonical(
+                    test_template_path("advanced_hooks_layout")))) != std::string::npos);
 
     {
-        ScopedDirectoryCleanup second_target(std::filesystem::temp_directory_path() / "tempify-app-hook-trust-target-2");
+        ScopedDirectoryCleanup second_target(std::filesystem::temp_directory_path() /
+                                             "tempify-app-hook-trust-target-2");
         ScopedStdinCapture input("");
         ScopedStdoutCapture capture;
         REQUIRE_EQ(app.run({
-            "advanced_hooks_layout",
-            second_target.path().string(),
-            "--accept-hooks", "ask",
-            "--set", "project_name=Trusted Hooks Again",
-            "--set", "project_slug=trusted-hooks-again",
-            "--set", "use_notes=false",
-            "--tui",
-        }), 0);
+                       "advanced_hooks_layout",
+                       second_target.path().string(),
+                       "--accept-hooks",
+                       "ask",
+                       "--set",
+                       "project_name=Trusted Hooks Again",
+                       "--set",
+                       "project_slug=trusted-hooks-again",
+                       "--set",
+                       "use_notes=false",
+                       "--tui",
+                   }),
+                   0);
         const std::string output = capture.str();
         REQUIRE(output.find("Template hooks trusted from previous approval.") != std::string::npos);
         REQUIRE(output.find("Run hooks and trust this template next time?") == std::string::npos);
@@ -122,11 +143,13 @@ TEST_CASE(TempifyApp_render_hook_timeout_flag_aborts_slow_hook_with_phase_diagno
         static_cast<void>(app.run({
             template_root.string(),
             target.path().string(),
-            "--hook-timeout-ms", "25",
-            "--set", "project_name=Slow App",
+            "--hook-timeout-ms",
+            "25",
+            "--set",
+            "project_name=Slow App",
         }));
         REQUIRE(false);
-    } catch (const tempify::TempifyError& error) {
+    } catch (const tempify::TempifyError &error) {
         REQUIRE(std::string(error.what()).find("Hook phase 'post' failed") != std::string::npos);
         REQUIRE(std::string(error.what()).find("post.lua") != std::string::npos);
         REQUIRE(std::string(error.what()).find("timed out after 25 ms") != std::string::npos);

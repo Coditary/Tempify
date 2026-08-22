@@ -8,27 +8,27 @@ namespace tempify {
 
 namespace {
 
-std::string describe_question_source(const QuestionDefinition& question) {
-    return question.source_path.empty()
-        ? question.key
-        : question.source_path.string() + "#" + std::to_string(question.source_index);
+std::string describe_question_source(const QuestionDefinition &question) {
+    return question.source_path.empty() ? question.key
+                                        : question.source_path.string() + "#" + std::to_string(question.source_index);
 }
 
-}
+} // namespace
 
-void TemplateValidator::validate(const TemplateManifest& manifest) const {
+void TemplateValidator::validate(const TemplateManifest &manifest) const {
     std::set<std::string> question_keys;
     std::set<std::string> aliases;
 
-    for (const auto& question : manifest.questions) {
+    for (const auto &question : manifest.questions) {
         if (aliases.contains(question.key)) {
             throw TempifyError("Question key '" + question.key + "' conflicts with existing alias");
         }
         if (!question_keys.insert(question.key).second) {
-            throw TempifyError("Duplicate question key '" + question.key + "' in " + describe_question_source(question));
+            throw TempifyError("Duplicate question key '" + question.key + "' in " +
+                               describe_question_source(question));
         }
 
-        for (const auto& alias : question.aliases) {
+        for (const auto &alias : question.aliases) {
             if (alias == question.key) {
                 throw TempifyError("Question alias must differ from key for '" + question.key + "'");
             }
@@ -42,14 +42,14 @@ void TemplateValidator::validate(const TemplateManifest& manifest) const {
     }
 
     std::set<std::string> known_layout_sources;
-    for (const auto& directory : manifest.directories) {
+    for (const auto &directory : manifest.directories) {
         known_layout_sources.insert(directory.relative_path);
     }
-    for (const auto& file : manifest.files) {
+    for (const auto &file : manifest.files) {
         known_layout_sources.insert(file.relative_path);
     }
 
-    for (const auto& rule : manifest.layout_rules) {
+    for (const auto &rule : manifest.layout_rules) {
         if (!known_layout_sources.contains(rule.source)) {
             throw TempifyError("Layout rule references missing source path: " + rule.source);
         }
@@ -59,7 +59,7 @@ void TemplateValidator::validate(const TemplateManifest& manifest) const {
     }
 
     std::set<std::string> script_names;
-    for (const auto& script : manifest.scripts) {
+    for (const auto &script : manifest.scripts) {
         if (!script_names.insert(script.name).second) {
             throw TempifyError("Duplicate script name found: " + script.name);
         }
@@ -68,7 +68,7 @@ void TemplateValidator::validate(const TemplateManifest& manifest) const {
         }
     }
 
-    const auto validate_hook = [](const std::optional<std::filesystem::path>& path, const std::string& name) {
+    const auto validate_hook = [](const std::optional<std::filesystem::path> &path, const std::string &name) {
         if (path.has_value() && !std::filesystem::is_regular_file(*path)) {
             throw TempifyError("Missing hook file for " + name + ": " + path->string());
         }
@@ -79,4 +79,4 @@ void TemplateValidator::validate(const TemplateManifest& manifest) const {
     validate_hook(manifest.post_hook_path, "post");
 }
 
-}
+} // namespace tempify

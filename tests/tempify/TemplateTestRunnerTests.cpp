@@ -1,5 +1,4 @@
 #include "TestHarness.h"
-
 #include "tempify/build/BuildPlanReport.h"
 #include "tempify/domain/BuildPlan.h"
 #include "tempify/domain/TemplateManifest.h"
@@ -11,10 +10,12 @@
 TEST_CASE(TemplateTestRunner_format_report_includes_failures_without_aborting_summary) {
     const tempify::TemplateTestReport report{
         .template_id = "basic_cpp",
-        .fixtures = {
-            tempify::TemplateFixtureResult{.name = "default_no_ci", .snapshot_file_count = 5, .includes_lockfile_snapshot = false},
-            tempify::TemplateFixtureResult{.name = "broken", .failure_message = "snapshot mismatch: line 1"},
-        },
+        .fixtures =
+            {
+                tempify::TemplateFixtureResult{
+                    .name = "default_no_ci", .snapshot_file_count = 5, .includes_lockfile_snapshot = false},
+                tempify::TemplateFixtureResult{.name = "broken", .failure_message = "snapshot mismatch: line 1"},
+            },
         .total_snapshot_artifact_count = 5,
         .elapsed_ms = 2,
     };
@@ -43,10 +44,13 @@ TEST_CASE(TemplateTestRunner_canonicalize_lockfile_json_replaces_volatile_fields
 TEST_CASE(TemplateTestRunner_format_report_includes_lock_and_totals) {
     const tempify::TemplateTestReport report{
         .template_id = "basic_cpp",
-        .fixtures = {
-            tempify::TemplateFixtureResult{.name = "default_no_ci", .snapshot_file_count = 5, .includes_lockfile_snapshot = false},
-            tempify::TemplateFixtureResult{.name = "hooks_and_lock", .snapshot_file_count = 7, .includes_lockfile_snapshot = true},
-        },
+        .fixtures =
+            {
+                tempify::TemplateFixtureResult{
+                    .name = "default_no_ci", .snapshot_file_count = 5, .includes_lockfile_snapshot = false},
+                tempify::TemplateFixtureResult{
+                    .name = "hooks_and_lock", .snapshot_file_count = 7, .includes_lockfile_snapshot = true},
+            },
         .total_snapshot_artifact_count = 13,
         .elapsed_ms = 4,
     };
@@ -61,10 +65,15 @@ TEST_CASE(TemplateTestRunner_format_report_includes_lock_and_totals) {
 TEST_CASE(TemplateTestRunner_format_report_json_includes_timing_and_failure_fields) {
     const tempify::TemplateTestReport report{
         .template_id = "basic_cpp",
-        .fixtures = {
-            tempify::TemplateFixtureResult{.name = "default_no_ci", .snapshot_file_count = 5, .includes_lockfile_snapshot = false, .elapsed_ms = 1},
-            tempify::TemplateFixtureResult{.name = "broken", .elapsed_ms = 2, .failure_message = "snapshot mismatch"},
-        },
+        .fixtures =
+            {
+                tempify::TemplateFixtureResult{.name = "default_no_ci",
+                                               .snapshot_file_count = 5,
+                                               .includes_lockfile_snapshot = false,
+                                               .elapsed_ms = 1},
+                tempify::TemplateFixtureResult{
+                    .name = "broken", .elapsed_ms = 2, .failure_message = "snapshot mismatch"},
+            },
         .total_snapshot_artifact_count = 5,
         .elapsed_ms = 3,
     };
@@ -130,15 +139,13 @@ TEST_CASE(BuildPlanReport_redacts_sensitive_values_in_generation_lock) {
     tempify::BuildPlan plan;
     plan.build_root = "/tmp/output";
 
-    const std::string output = tempify::format_generation_lock_json(manifest,
-                                                                    plan,
+    const std::string output = tempify::format_generation_lock_json(manifest, plan,
                                                                     {
                                                                         {"api_token", "secret-value"},
                                                                         {"project_name", "Stone App"},
                                                                         {"token", "secret-value"},
                                                                     },
-                                                                    tempify::HookAcceptance::Yes,
-                                                                    false);
+                                                                    tempify::HookAcceptance::Yes, false);
 
     REQUIRE(output.find("\"managed_files\": [") != std::string::npos);
     REQUIRE(output.find("\"managed_file_hashes\": {") != std::string::npos);
