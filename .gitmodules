@@ -1,6 +1,0 @@
-[submodule "tempify-registry"]
-	path = tempify-registry
-	url = https://github.com/Coditary/tempify-registry.git
-[submodule "tempify-templates"]
-	path = tempify-templates
-	url = https://github.com/Coditary/tempify-templates.git
