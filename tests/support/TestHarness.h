@@ -31,7 +31,7 @@ class AssertionFailure : public std::runtime_error {
 
 class ScopedEnvironmentVariable {
   public:
-    ScopedEnvironmentVariable(std::string name, std::string value);
+    ScopedEnvironmentVariable(std::string name, const std::string &value);
     ScopedEnvironmentVariable(const ScopedEnvironmentVariable &) = delete;
     ScopedEnvironmentVariable &operator=(const ScopedEnvironmentVariable &) = delete;
     ~ScopedEnvironmentVariable();
