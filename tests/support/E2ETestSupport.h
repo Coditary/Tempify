@@ -15,7 +15,7 @@ inline std::string slug_to_namespace(const std::string &slug) {
 }
 
 inline std::map<std::string, std::string> isolated_cli_env(const std::filesystem::path &data_home,
-                                                             const std::filesystem::path &config_home = {}) {
+                                                           const std::filesystem::path &config_home = {}) {
     std::map<std::string, std::string> env;
     env["XDG_DATA_HOME"] = data_home.string();
     if (!config_home.empty()) {

@@ -1,11 +1,10 @@
 #pragma once
 
 #include "TestHarness.h"
-
 #include "tempify/build/GenerationLock.h"
 
-#include <cstdlib>
 #include <cstdio>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -487,8 +486,7 @@ inline void inject_stale_managed_file(const std::filesystem::path &target, const
     if (files_close_pos == std::string::npos) {
         throw std::runtime_error("managed_files section not found in lock file");
     }
-    lock_text.insert(files_close_pos,
-                     ",\n    \"" + json_escape(relative_path) + "\"");
+    lock_text.insert(files_close_pos, ",\n    \"" + json_escape(relative_path) + "\"");
 
     const std::string hashes_close = "  },\n  \"values\"";
     const std::size_t hashes_close_pos = lock_text.find(hashes_close);

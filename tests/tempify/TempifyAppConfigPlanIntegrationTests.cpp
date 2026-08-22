@@ -373,10 +373,13 @@ TEST_CASE(TempifyApp_doctor_json_outputs_machine_readable_summary) {
 }
 
 TEST_CASE(TempifyApp_config_hook_timeout_ms_applies_during_render_without_cli_flag) {
-    ScopedDirectoryCleanup workspace(std::filesystem::temp_directory_path() / "tempify-app-config-hook-timeout-workspace");
+    ScopedDirectoryCleanup workspace(std::filesystem::temp_directory_path() /
+                                     "tempify-app-config-hook-timeout-workspace");
     ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-app-config-hook-timeout-target");
-    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-config-hook-timeout-data-home");
-    ScopedTempifyConfigHome config_home(std::filesystem::temp_directory_path() / "tempify-app-config-hook-timeout-config-home");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() /
+                                    "tempify-app-config-hook-timeout-data-home");
+    ScopedTempifyConfigHome config_home(std::filesystem::temp_directory_path() /
+                                        "tempify-app-config-hook-timeout-config-home");
     const std::filesystem::path template_root = create_slow_hook_template(workspace.path());
 
     write_text_file(config_home.path() / "tempify" / "config.json", "{\n"
@@ -408,14 +411,14 @@ TEST_CASE(TempifyApp_config_hook_timeout_ms_applies_during_render_without_cli_fl
 }
 
 TEST_CASE(TempifyApp_config_hook_timeout_ms_cli_flag_overrides_config_value) {
-    ScopedDirectoryCleanup workspace(
-        std::filesystem::temp_directory_path() / "tempify-app-config-hook-timeout-override-workspace");
-    ScopedDirectoryCleanup target(
-        std::filesystem::temp_directory_path() / "tempify-app-config-hook-timeout-override-target");
-    ScopedTempifyDataHome data_home(
-        std::filesystem::temp_directory_path() / "tempify-app-config-hook-timeout-override-data-home");
-    ScopedTempifyConfigHome config_home(
-        std::filesystem::temp_directory_path() / "tempify-app-config-hook-timeout-override-config-home");
+    ScopedDirectoryCleanup workspace(std::filesystem::temp_directory_path() /
+                                     "tempify-app-config-hook-timeout-override-workspace");
+    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() /
+                                  "tempify-app-config-hook-timeout-override-target");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() /
+                                    "tempify-app-config-hook-timeout-override-data-home");
+    ScopedTempifyConfigHome config_home(std::filesystem::temp_directory_path() /
+                                        "tempify-app-config-hook-timeout-override-config-home");
     const std::filesystem::path template_root = create_slow_hook_template(workspace.path());
 
     write_text_file(config_home.path() / "tempify" / "config.json", "{\n"
@@ -454,9 +457,8 @@ TEST_CASE(TempifyApp_template_env_file_supplies_defaults_during_render) {
     const std::filesystem::path template_root =
         create_basic_template_at(workspace.path() / "templates" / "env_defaults_demo", "env_defaults_demo",
                                  "Env Defaults Demo", "1.0.0", "Template with .env defaults", "FROM ENV DEFAULTS\n");
-    write_text_file(template_root / ".env",
-                    "project_name=From Env File\n"
-                    "project_slug=from-env-file\n");
+    write_text_file(template_root / ".env", "project_name=From Env File\n"
+                                            "project_slug=from-env-file\n");
 
     ScopedCurrentPath cwd(workspace.path());
     tempify::TempifyApp app;
@@ -509,13 +511,13 @@ TEST_CASE(TempifyApp_render_rejects_corrupt_workspace_config_file) {
 }
 
 TEST_CASE(TempifyApp_render_rejects_invalid_accept_hooks_value_in_config) {
-    ScopedDirectoryCleanup workspace(
-        std::filesystem::temp_directory_path() / "tempify-app-invalid-hooks-config-workspace");
+    ScopedDirectoryCleanup workspace(std::filesystem::temp_directory_path() /
+                                     "tempify-app-invalid-hooks-config-workspace");
     ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-app-invalid-hooks-config-target");
-    ScopedTempifyDataHome data_home(
-        std::filesystem::temp_directory_path() / "tempify-app-invalid-hooks-config-data-home");
-    ScopedTempifyConfigHome config_home(
-        std::filesystem::temp_directory_path() / "tempify-app-invalid-hooks-config-config-home");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() /
+                                    "tempify-app-invalid-hooks-config-data-home");
+    ScopedTempifyConfigHome config_home(std::filesystem::temp_directory_path() /
+                                        "tempify-app-invalid-hooks-config-config-home");
     std::filesystem::create_directories(workspace.path());
     link_test_templates_into_workspace(workspace.path());
     write_text_file(config_home.path() / "tempify" / "config.json", "{\n"

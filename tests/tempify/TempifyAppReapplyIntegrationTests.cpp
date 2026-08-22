@@ -877,7 +877,8 @@ TEST_CASE(TempifyApp_reapply_deletes_managed_file_no_longer_in_template_output) 
 }
 
 TEST_CASE(TempifyApp_reapply_blocks_delete_when_stale_file_was_locally_modified) {
-    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-app-reapply-delete-conflict-target");
+    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() /
+                                  "tempify-app-reapply-delete-conflict-target");
     ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() /
                                     "tempify-app-reapply-delete-conflict-data-home");
     tempify::TempifyApp app;
@@ -928,7 +929,8 @@ TEST_CASE(TempifyApp_reapply_blocks_delete_when_stale_file_was_locally_modified)
 
 TEST_CASE(TempifyApp_reapply_json_reports_deleted_managed_file) {
     ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-app-reapply-delete-json-target");
-    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-reapply-delete-json-data-home");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() /
+                                    "tempify-app-reapply-delete-json-data-home");
     tempify::TempifyApp app;
     REQUIRE_EQ(app.run({
                    "basic_cpp",
@@ -976,7 +978,8 @@ TEST_CASE(TempifyApp_reapply_json_reports_deleted_managed_file) {
 
 TEST_CASE(TempifyApp_reapply_blocks_delete_when_lock_has_no_baseline_hash) {
     ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-app-reapply-delete-review-target");
-    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-reapply-delete-review-data-home");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() /
+                                    "tempify-app-reapply-delete-review-data-home");
     tempify::TempifyApp app;
     REQUIRE_EQ(app.run({
                    "basic_cpp",
@@ -1024,7 +1027,8 @@ TEST_CASE(TempifyApp_reapply_blocks_delete_when_lock_has_no_baseline_hash) {
 
 TEST_CASE(TempifyApp_reapply_report_shows_delete_candidate_without_removing_file) {
     ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-app-reapply-delete-report-target");
-    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-reapply-delete-report-data-home");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() /
+                                    "tempify-app-reapply-delete-report-data-home");
     tempify::TempifyApp app;
     REQUIRE_EQ(app.run({
                    "basic_cpp",
@@ -1072,7 +1076,8 @@ TEST_CASE(TempifyApp_reapply_report_shows_delete_candidate_without_removing_file
 }
 
 TEST_CASE(TempifyApp_reapply_json_blocks_delete_conflict_without_removing_stale_file) {
-    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-app-reapply-delete-json-conflict-target");
+    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() /
+                                  "tempify-app-reapply-delete-json-conflict-target");
     ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() /
                                     "tempify-app-reapply-delete-json-conflict-data-home");
     tempify::TempifyApp app;
@@ -1127,7 +1132,8 @@ TEST_CASE(TempifyApp_reapply_json_blocks_delete_conflict_without_removing_stale_
 }
 
 TEST_CASE(TempifyApp_reapply_subcommand_blocks_delete_when_stale_file_was_locally_modified) {
-    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-app-reapply-delete-subcommand-conflict-target");
+    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() /
+                                  "tempify-app-reapply-delete-subcommand-conflict-target");
     ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() /
                                     "tempify-app-reapply-delete-subcommand-conflict-data-home");
     tempify::TempifyApp app;
@@ -1173,15 +1179,18 @@ TEST_CASE(TempifyApp_reapply_subcommand_blocks_delete_when_stale_file_was_locall
 
     REQUIRE(exit_code != 0);
     const std::string error_output = read_text_file(stderr_file);
-    REQUIRE(error_output.find("conflict item") != std::string::npos || error_output.find("REAPPLY_BLOCKED") != std::string::npos);
+    REQUIRE(error_output.find("conflict item") != std::string::npos ||
+            error_output.find("REAPPLY_BLOCKED") != std::string::npos);
     REQUIRE(error_output.find("old-managed.txt") != std::string::npos);
     REQUIRE(std::filesystem::is_regular_file(target.path() / "old-managed.txt"));
     std::filesystem::remove(stderr_file);
 }
 
 TEST_CASE(TempifyApp_reapply_blocks_delete_on_version_downgrade_without_removing_stale_file) {
-    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-app-reapply-delete-downgrade-target");
-    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-reapply-delete-downgrade-data-home");
+    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() /
+                                  "tempify-app-reapply-delete-downgrade-target");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() /
+                                    "tempify-app-reapply-delete-downgrade-data-home");
     tempify::TempifyApp app;
     REQUIRE_EQ(app.run({
                    "basic_cpp",
@@ -1234,8 +1243,10 @@ TEST_CASE(TempifyApp_reapply_blocks_delete_on_version_downgrade_without_removing
 }
 
 TEST_CASE(TempifyApp_diff_only_leaves_stale_managed_file_on_disk) {
-    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-app-reapply-delete-diff-only-target");
-    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-reapply-delete-diff-only-data-home");
+    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() /
+                                  "tempify-app-reapply-delete-diff-only-target");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() /
+                                    "tempify-app-reapply-delete-diff-only-data-home");
     tempify::TempifyApp app;
     REQUIRE_EQ(app.run({
                    "basic_cpp",
@@ -1281,7 +1292,8 @@ TEST_CASE(TempifyApp_diff_only_leaves_stale_managed_file_on_disk) {
 }
 
 TEST_CASE(TempifyApp_reapply_json_blocks_delete_review_when_lock_has_no_baseline_hash) {
-    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-app-reapply-delete-json-review-target");
+    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() /
+                                  "tempify-app-reapply-delete-json-review-target");
     ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() /
                                     "tempify-app-reapply-delete-json-review-data-home");
     tempify::TempifyApp app;
@@ -1336,7 +1348,8 @@ TEST_CASE(TempifyApp_reapply_json_blocks_delete_review_when_lock_has_no_baseline
 }
 
 TEST_CASE(TempifyApp_reapply_report_json_shows_delete_without_removing_file) {
-    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-app-reapply-delete-report-json-target");
+    ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() /
+                                  "tempify-app-reapply-delete-report-json-target");
     ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() /
                                     "tempify-app-reapply-delete-report-json-data-home");
     tempify::TempifyApp app;
@@ -1385,4 +1398,3 @@ TEST_CASE(TempifyApp_reapply_report_json_shows_delete_without_removing_file) {
     REQUIRE(output.find("\"applied\": {") == std::string::npos);
     REQUIRE_EQ(read_text_file(target.path() / "old-managed.txt"), stale_content);
 }
-

@@ -47,8 +47,7 @@ ProcessResult run_cli_posix(const std::filesystem::path &executable, const std::
     int stdout_pipe[2]{-1, -1};
     int stderr_pipe[2]{-1, -1};
     int stdin_pipe[2]{-1, -1};
-    if (::pipe(stdout_pipe) != 0 || ::pipe(stderr_pipe) != 0
-        || (!stdin_text.empty() && ::pipe(stdin_pipe) != 0)) {
+    if (::pipe(stdout_pipe) != 0 || ::pipe(stderr_pipe) != 0 || (!stdin_text.empty() && ::pipe(stdin_pipe) != 0)) {
         throw std::runtime_error("failed to create subprocess pipes");
     }
 
@@ -132,8 +131,7 @@ std::wstring to_wide(const std::string &text) {
     if (text.empty()) {
         return {};
     }
-    const int required =
-        ::MultiByteToWideChar(CP_UTF8, 0, text.c_str(), static_cast<int>(text.size()), nullptr, 0);
+    const int required = ::MultiByteToWideChar(CP_UTF8, 0, text.c_str(), static_cast<int>(text.size()), nullptr, 0);
     if (required <= 0) {
         throw std::runtime_error("failed to convert text to wide string");
     }
@@ -183,8 +181,7 @@ std::string quote_windows_argument(const std::string &arg) {
     return quoted;
 }
 
-std::wstring build_windows_command_line(const std::filesystem::path &executable,
-                                        const std::vector<std::string> &args) {
+std::wstring build_windows_command_line(const std::filesystem::path &executable, const std::vector<std::string> &args) {
     std::string command = quote_windows_argument(executable.string());
     for (const std::string &arg : args) {
         command.push_back(' ');
@@ -206,9 +203,9 @@ ProcessResult run_cli_windows(const std::filesystem::path &executable, const std
     HANDLE stderr_write = nullptr;
     HANDLE stdin_read = nullptr;
     HANDLE stdin_write = nullptr;
-    if (!::CreatePipe(&stdout_read, &stdout_write, &security_attributes, 0)
-        || !::CreatePipe(&stderr_read, &stderr_write, &security_attributes, 0)
-        || (!stdin_text.empty() && !::CreatePipe(&stdin_read, &stdin_write, &security_attributes, 0))) {
+    if (!::CreatePipe(&stdout_read, &stdout_write, &security_attributes, 0) ||
+        !::CreatePipe(&stderr_read, &stderr_write, &security_attributes, 0) ||
+        (!stdin_text.empty() && !::CreatePipe(&stdin_read, &stdin_write, &security_attributes, 0))) {
         throw std::runtime_error("failed to create subprocess pipes");
     }
 
@@ -239,17 +236,11 @@ ProcessResult run_cli_windows(const std::filesystem::path &executable, const std
         environment_block.push_back(L'\0');
     }
 
-    const BOOL created = ::CreateProcessW(
-        to_wide(executable.string()).c_str(),
-        mutable_command_line.data(),
-        nullptr,
-        nullptr,
-        TRUE,
-        0,
-        environment_block.empty() ? nullptr : environment_block.data(),
-        working_directory.empty() ? nullptr : to_wide(working_directory.string()).c_str(),
-        &startup_info,
-        &process_info);
+    const BOOL created =
+        ::CreateProcessW(to_wide(executable.string()).c_str(), mutable_command_line.data(), nullptr, nullptr, TRUE, 0,
+                         environment_block.empty() ? nullptr : environment_block.data(),
+                         working_directory.empty() ? nullptr : to_wide(working_directory.string()).c_str(),
+                         &startup_info, &process_info);
     ::CloseHandle(stdout_write);
     ::CloseHandle(stderr_write);
     if (!stdin_text.empty()) {
@@ -280,16 +271,16 @@ ProcessResult run_cli_windows(const std::filesystem::path &executable, const std
     std::array<char, 4096> buffer{};
     while (true) {
         DWORD bytes_read = 0;
-        if (!::ReadFile(stdout_read, buffer.data(), static_cast<DWORD>(buffer.size()), &bytes_read, nullptr)
-            || bytes_read == 0) {
+        if (!::ReadFile(stdout_read, buffer.data(), static_cast<DWORD>(buffer.size()), &bytes_read, nullptr) ||
+            bytes_read == 0) {
             break;
         }
         result.stdout_text.append(buffer.data(), bytes_read);
     }
     while (true) {
         DWORD bytes_read = 0;
-        if (!::ReadFile(stderr_read, buffer.data(), static_cast<DWORD>(buffer.size()), &bytes_read, nullptr)
-            || bytes_read == 0) {
+        if (!::ReadFile(stderr_read, buffer.data(), static_cast<DWORD>(buffer.size()), &bytes_read, nullptr) ||
+            bytes_read == 0) {
             break;
         }
         result.stderr_text.append(buffer.data(), bytes_read);

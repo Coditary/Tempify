@@ -195,6 +195,74 @@ TEST_CASE(BuildExecutor_overwrite_true_allows_existing_target_and_copies_raw_fil
     REQUIRE_EQ(read_text_file(build_root / "raw.txt"), std::string("RAW {{ name }}\n"));
 }
 
+TEST_CASE(BuildExecutor_overwrite_replaces_build_root_file_with_directory) {
+    ScopedDirectoryCleanup workspace(std::filesystem::temp_directory_path() /
+                                     "tempify-build-executor-overwrite-build-root-file");
+    const std::filesystem::path template_root = workspace.path() / "template";
+    const std::filesystem::path build_root = workspace.path() / "out";
+    const std::filesystem::path source_file = template_root / "files" / "hello.txt";
+    write_text_file(source_file, "hello\n");
+    write_text_file(build_root, "blocking file\n");
+
+    tempify::TemplateManifest manifest = make_manifest(template_root);
+
+    tempify::BuildPlan plan;
+    plan.build_root = build_root;
+    plan.existing_path_behavior = tempify::ExistingPathBehavior::Overwrite;
+    plan.directories = {build_root};
+    plan.files = {
+        tempify::PlannedFile{
+            .source_path = source_file,
+            .output_path = build_root / "hello.txt",
+            .render_with_prebyte = false,
+        },
+    };
+
+    const tempify::PrebyteRenderer renderer;
+    const tempify::LuaEngine lua_engine;
+    const tempify::BuildExecutor executor(renderer, lua_engine);
+
+    executor.execute(plan, manifest, {}, true);
+
+    REQUIRE(std::filesystem::is_directory(build_root));
+    REQUIRE_EQ(read_text_file(build_root / "hello.txt"), std::string("hello\n"));
+}
+
+TEST_CASE(BuildExecutor_overwrite_replaces_directory_path_file_before_creation) {
+    ScopedDirectoryCleanup workspace(std::filesystem::temp_directory_path() /
+                                     "tempify-build-executor-overwrite-directory-file");
+    const std::filesystem::path template_root = workspace.path() / "template";
+    const std::filesystem::path build_root = workspace.path() / "out";
+    const std::filesystem::path nested_dir = build_root / "nested";
+    const std::filesystem::path source_file = template_root / "files" / "nested.txt";
+    write_text_file(source_file, "nested\n");
+    std::filesystem::create_directories(build_root);
+    write_text_file(nested_dir, "blocking file\n");
+
+    tempify::TemplateManifest manifest = make_manifest(template_root);
+
+    tempify::BuildPlan plan;
+    plan.build_root = build_root;
+    plan.existing_path_behavior = tempify::ExistingPathBehavior::Overwrite;
+    plan.directories = {nested_dir};
+    plan.files = {
+        tempify::PlannedFile{
+            .source_path = source_file,
+            .output_path = nested_dir / "nested.txt",
+            .render_with_prebyte = false,
+        },
+    };
+
+    const tempify::PrebyteRenderer renderer;
+    const tempify::LuaEngine lua_engine;
+    const tempify::BuildExecutor executor(renderer, lua_engine);
+
+    executor.execute(plan, manifest, {}, true);
+
+    REQUIRE(std::filesystem::is_directory(nested_dir));
+    REQUIRE_EQ(read_text_file(nested_dir / "nested.txt"), std::string("nested\n"));
+}
+
 TEST_CASE(BuildExecutor_skip_existing_files_preserves_old_content_and_writes_missing_files) {
     ScopedDirectoryCleanup workspace(std::filesystem::temp_directory_path() / "tempify-build-executor-skip-test");
     const std::filesystem::path template_root = workspace.path() / "template";

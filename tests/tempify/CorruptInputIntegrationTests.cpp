@@ -1,5 +1,4 @@
 #include "TempifyAppTestSupport.h"
-
 #include "tempify/build/GenerationLock.h"
 #include "tempify/question/AnswerFile.h"
 #include "tempify/support/Errors.h"
@@ -43,18 +42,12 @@ void render_basic_cpp_target(tempify::TempifyApp &app, const std::filesystem::pa
 
 std::vector<std::string> basic_cpp_render_args(const std::filesystem::path &target) {
     return {
-        "basic_cpp",
-        target.string(),
-        "--set",
-        "project_name=Corrupt Input App",
-        "--set",
-        "name_slug=corrupt-input-app",
-        "--set",
-        "namespace=corrupt_input_ns",
-        "--set",
-        "include_ci=false",
-        "--set",
-        "author=Corrupt Input Tester",
+        "basic_cpp", target.string(),
+        "--set",     "project_name=Corrupt Input App",
+        "--set",     "name_slug=corrupt-input-app",
+        "--set",     "namespace=corrupt_input_ns",
+        "--set",     "include_ci=false",
+        "--set",     "author=Corrupt Input Tester",
     };
 }
 
@@ -109,8 +102,7 @@ TEST_CASE(load_answer_file_reports_missing_file) {
 }
 
 TEST_CASE(load_generation_lock_rejects_malformed_json) {
-    const std::filesystem::path path =
-        std::filesystem::temp_directory_path() / "tempify-corrupt-lock-malformed.json";
+    const std::filesystem::path path = std::filesystem::temp_directory_path() / "tempify-corrupt-lock-malformed.json";
     write_text_file(path, "{ broken lock\n");
 
     try {
@@ -211,7 +203,8 @@ TEST_CASE(TempifyApp_reapply_rejects_corrupt_lock_file) {
 
 TEST_CASE(TempifyApp_render_rejects_corrupt_answers_file) {
     ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-corrupt-answers-render-target");
-    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-corrupt-answers-render-data-home");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() /
+                                    "tempify-corrupt-answers-render-data-home");
     const std::filesystem::path answers_file = answers_path("render-corrupt");
     write_text_file(answers_file, "{ broken answers\n");
 
@@ -234,20 +227,21 @@ TEST_CASE(TempifyApp_render_rejects_corrupt_answers_file) {
 
 TEST_CASE(TempifyApp_render_rejects_answers_file_with_nested_object_value) {
     ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-corrupt-answers-nested-target");
-    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-corrupt-answers-nested-data-home");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() /
+                                    "tempify-corrupt-answers-nested-data-home");
     const std::filesystem::path answers_file = answers_path("render-nested");
     write_text_file(answers_file, "{\n  \"project_name\": { \"nested\": true }\n}\n");
 
     tempify::TempifyApp app;
     REQUIRE_THROWS_AS(app.run({
-                              "basic_cpp",
-                              target.path().string(),
-                              "--answers",
-                              answers_file.string(),
-                              "--set",
-                              "author=Corrupt Input Tester",
-                              "--non-interactive",
-                          }),
+                          "basic_cpp",
+                          target.path().string(),
+                          "--answers",
+                          answers_file.string(),
+                          "--set",
+                          "author=Corrupt Input Tester",
+                          "--non-interactive",
+                      }),
                       tempify::TempifyError);
 }
 

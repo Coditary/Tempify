@@ -15,16 +15,15 @@ void require_contains_all(const std::string &script, const std::vector<std::stri
 
 const std::vector<std::string> &top_level_commands() {
     static const std::vector<std::string> commands = {
-        "list", "info", "doctor", "completion", "validate", "inspect",
-        "lint", "test", "refresh", "reapply", "process",
+        "list", "info", "doctor", "completion", "validate", "inspect", "lint", "test", "refresh", "reapply", "process",
     };
     return commands;
 }
 
 const std::vector<std::string> &render_flags() {
     static const std::vector<std::string> flags = {
-        "--set", "--answers", "--non-interactive", "--strict", "--hook-timeout-ms", "--dry-run", "--plan-json",
-        "--diff", "--reapply", "--report", "--json", "--questions", "--accept-hooks", "--no-hooks",
+        "--set",  "--answers", "--non-interactive", "--strict", "--hook-timeout-ms", "--dry-run",      "--plan-json",
+        "--diff", "--reapply", "--report",          "--json",   "--questions",       "--accept-hooks", "--no-hooks",
     };
     return flags;
 }

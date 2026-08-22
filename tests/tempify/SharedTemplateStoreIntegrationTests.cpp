@@ -139,7 +139,8 @@ TEST_CASE(TempifyApp_stale_shared_index_entry_missing_on_disk_is_not_listed_and_
 }
 
 TEST_CASE(TempifyApp_refresh_rejects_duplicate_shared_template_ids) {
-    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-shared-store-duplicate-data-home");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() /
+                                    "tempify-shared-store-duplicate-data-home");
     static_cast<void>(create_basic_template_at(data_home.shared_root() / "templates" / "dup_tpl_alpha", "dup_tpl",
                                                "Duplicate Alpha", "1.0.0", "Alpha copy"));
     static_cast<void>(create_basic_template_at(data_home.shared_root() / "templates" / "dup_tpl_beta", "dup_tpl",

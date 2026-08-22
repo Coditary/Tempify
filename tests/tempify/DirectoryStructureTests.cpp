@@ -48,14 +48,13 @@ std::filesystem::path create_directory_layout_template(const std::filesystem::pa
     const std::filesystem::path template_root = root / "directory_layout";
     std::filesystem::create_directories(template_root / "files" / "empty_keep");
     std::filesystem::create_directories(template_root / "files" / "deep" / "nested");
-    write_text_file(template_root / "template.lua",
-                    "return {\n"
-                    "  id = \"directory_layout\",\n"
-                    "  name = \"Directory Layout\",\n"
-                    "  version = \"1.0.0\",\n"
-                    "  source_dir = \"files\",\n"
-                    "  output = { path = \"{{ project_slug }}\", overwrite = false },\n"
-                    "}\n");
+    write_text_file(template_root / "template.lua", "return {\n"
+                                                    "  id = \"directory_layout\",\n"
+                                                    "  name = \"Directory Layout\",\n"
+                                                    "  version = \"1.0.0\",\n"
+                                                    "  source_dir = \"files\",\n"
+                                                    "  output = { path = \"{{ project_slug }}\", overwrite = false },\n"
+                                                    "}\n");
     write_text_file(template_root / "questions.lua",
                     "return {\n"
                     "  order = { \"General\" },\n"
@@ -85,13 +84,13 @@ tempify::TemplateManifest make_flat_manifest(const std::filesystem::path &templa
 } // namespace
 
 TEST_CASE(BuildPlanner_collects_parent_and_empty_template_directories_in_plan) {
-    ScopedDirectoryCleanupLocal workspace(std::filesystem::temp_directory_path() / "tempify-build-planner-directory-plan");
+    ScopedDirectoryCleanupLocal workspace(std::filesystem::temp_directory_path() /
+                                          "tempify-build-planner-directory-plan");
     const std::filesystem::path template_root = create_directory_layout_template(workspace.path());
 
     tempify::LuaEngine lua_engine;
     tempify::TemplateLoader loader(lua_engine);
-    const tempify::TemplateManifest manifest =
-        loader.load(template_root, {{"directory_layout", template_root}});
+    const tempify::TemplateManifest manifest = loader.load(template_root, {{"directory_layout", template_root}});
 
     bool has_empty_keep = false;
     for (const auto &directory : manifest.directories) {
@@ -255,9 +254,8 @@ TEST_CASE(LuaEngine_run_hook_mkdir_creates_nested_directories) {
     };
 
     const std::filesystem::path hook_path = build_root.path() / "nested_mkdir.lua";
-    write_text_file(hook_path,
-                    "mkdir('nested/deep/leaf')\n"
-                    "write_file('nested/deep/leaf/marker.txt', 'created')\n");
+    write_text_file(hook_path, "mkdir('nested/deep/leaf')\n"
+                               "write_file('nested/deep/leaf/marker.txt', 'created')\n");
 
     lua_engine.run_hook(hook_path, manifest, context, renderer);
 
@@ -279,13 +277,13 @@ TEST_CASE(TempifyApp_render_creates_nested_target_path_and_template_directories)
 
     tempify::TempifyApp app;
     REQUIRE_EQ(app.run({
-                       template_root.string(),
-                       target.string(),
-                       "--set",
-                       "project_name=Directory Structure",
-                       "--set",
-                       "project_slug=directory-structure",
-                   }),
+                   template_root.string(),
+                   target.string(),
+                   "--set",
+                   "project_name=Directory Structure",
+                   "--set",
+                   "project_slug=directory-structure",
+               }),
                0);
 
     REQUIRE(std::filesystem::is_directory(target));
@@ -310,12 +308,12 @@ TEST_CASE(TempifyApp_render_rejects_target_path_that_exists_as_file) {
 
     tempify::TempifyApp app;
     REQUIRE_THROWS_AS(app.run({
-                                template_root.string(),
-                                target.string(),
-                                "--set",
-                                "project_name=Blocked Target",
-                                "--set",
-                                "project_slug=blocked-target",
-                            }),
-                            tempify::TempifyError);
+                          template_root.string(),
+                          target.string(),
+                          "--set",
+                          "project_name=Blocked Target",
+                          "--set",
+                          "project_slug=blocked-target",
+                      }),
+                      tempify::TempifyError);
 }

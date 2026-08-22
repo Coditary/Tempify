@@ -21,8 +21,7 @@ struct HookSandboxFixture {
 
     HookSandboxFixture(const char *label)
         : sandbox_root(std::filesystem::temp_directory_path() / (std::string("tempify-hook-sandbox-") + label)),
-          build_root(sandbox_root.path() / "build"),
-          outside_root(sandbox_root.path() / "outside") {
+          build_root(sandbox_root.path() / "build"), outside_root(sandbox_root.path() / "outside") {
         std::filesystem::create_directories(build_root.path());
         std::filesystem::create_directories(outside_root.path());
     }
@@ -87,7 +86,8 @@ TEST_CASE(LuaEngine_run_hook_read_file_rejects_absolute_path_outside_allowed_roo
     const std::filesystem::path secret_file = fixture.outside_root.path() / "secret.txt";
     write_text_file(secret_file, "top-secret");
 
-    const std::string hook = "local content = read_file('" + secret_file.string() + "')\n"
+    const std::string hook = "local content = read_file('" + secret_file.string() +
+                             "')\n"
                              "write_file('copied.txt', content)\n";
 
     try {
@@ -139,12 +139,52 @@ TEST_CASE(LuaEngine_run_hook_copy_rejects_output_outside_build_root) {
 
 TEST_CASE(LuaEngine_run_hook_still_allows_template_relative_reads_and_build_root_writes) {
     HookSandboxFixture fixture("allowed-ops");
-    fixture.run_hook_script(
-        "local template_text = read_file('files/docs/readme.txt.pbt')\n"
-        "write_file('allowed.txt', template_text)\n"
-        "mkdir('nested')\n");
+    fixture.run_hook_script("local template_text = read_file('files/docs/readme.txt.pbt')\n"
+                            "write_file('allowed.txt', template_text)\n"
+                            "mkdir('nested')\n");
 
     REQUIRE(std::filesystem::exists(fixture.build_root.path() / "allowed.txt"));
     REQUIRE(read_text_file(fixture.build_root.path() / "allowed.txt").find("{{ project_name }}") != std::string::npos);
     REQUIRE(std::filesystem::is_directory(fixture.build_root.path() / "nested"));
+}
+
+TEST_CASE(LuaEngine_run_hook_lists_files_and_directories_within_build_root) {
+    HookSandboxFixture fixture("list");
+    fixture.run_hook_script("write_file('listed.txt', 'x')\n"
+                            "mkdir('listed-dir')\n"
+                            "local files = list_files('.')\n"
+                            "local dirs = list_dirs('.')\n"
+                            "write_file('files.log', table.concat(files, ','))\n"
+                            "write_file('dirs.log', table.concat(dirs, ','))\n"
+                            "write_file('empty-files.log', tostring(#list_files('listed.txt')))\n");
+
+    const std::string files = read_text_file(fixture.build_root.path() / "files.log");
+    const std::string dirs = read_text_file(fixture.build_root.path() / "dirs.log");
+    REQUIRE(files.find("listed.txt") != std::string::npos);
+    REQUIRE(dirs.find("listed-dir") != std::string::npos);
+    REQUIRE_EQ(read_text_file(fixture.build_root.path() / "empty-files.log"), std::string("0"));
+}
+
+TEST_CASE(LuaEngine_run_hook_copy_and_process_helpers_work_inside_build_root) {
+    HookSandboxFixture fixture("helpers");
+    fixture.run_hook_script("write_file('source.txt', 'Hello {{ project_name }}')\n"
+                            "copy('source.txt', 'copy.txt')\n"
+                            "local rendered = process_string('Hi {{ project_slug }}')\n"
+                            "local overridden = process_string('Hi {{ project_slug }}', {project_slug='custom'})\n"
+                            "write_file('rendered.txt', rendered)\n"
+                            "write_file('override.txt', overridden)\n"
+                            "process_file('source.txt', 'processed.txt')\n");
+
+    REQUIRE_EQ(read_text_file(fixture.build_root.path() / "copy.txt"), std::string("Hello {{ project_name }}"));
+    REQUIRE_EQ(read_text_file(fixture.build_root.path() / "rendered.txt"), std::string("Hi sandbox"));
+    REQUIRE_EQ(read_text_file(fixture.build_root.path() / "override.txt"), std::string("Hi custom"));
+    REQUIRE_EQ(read_text_file(fixture.build_root.path() / "processed.txt"), std::string("Hello Sandbox"));
+}
+
+TEST_CASE(LuaEngine_run_hook_exec_runs_shell_command_in_build_root) {
+    HookSandboxFixture fixture("exec");
+    fixture.run_hook_script("local root = get_build_root()\n"
+                            "exec('echo hook-exec > \"' .. root .. '/marker.txt\"')\n");
+
+    REQUIRE_EQ(read_text_file(fixture.build_root.path() / "marker.txt"), std::string("hook-exec\n"));
 }
