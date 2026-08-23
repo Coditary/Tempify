@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "repositories": [
     {
-      "id": "tempify-default",
-      "url": "tempify-registry/templates.json",
+      "id": "tempify-registry",
+      "url": "https://raw.githubusercontent.com/Coditary/tempify-registry/main/templates.json",
       "priority": 0,
       "enabled": true
     }
