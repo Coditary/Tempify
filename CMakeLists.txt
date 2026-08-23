@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.31)
 
-project(Tempify VERSION 0.1.2 LANGUAGES CXX)
+project(Tempify VERSION 0.1.3 LANGUAGES CXX)
 
 include(CTest)
 include(FetchContent)

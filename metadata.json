@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "name": "tempify",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "summary": "ReqPack Tempify template manager",
   "description": "ReqPack plugin for Tempify template catalogs and shared-store installs",
   "license": "MIT"
