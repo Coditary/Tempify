@@ -3,7 +3,7 @@ name: ci
 on:
   push:
     branches:
-      - "**"
+      - main
     tags:
       - "v*"
   pull_request:
@@ -280,7 +280,6 @@ jobs:
 
       - name: Run coverage tests
         run: make coverage COVERAGE_MIN_LINE=85
-
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:

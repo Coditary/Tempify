@@ -59,7 +59,7 @@ coverage:
 		-DCMAKE_TOOLCHAIN_FILE="$$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
 		-DVCPKG_TARGET_TRIPLET="$$VCPKG_TARGET_TRIPLET" && \
 	cmake --build --preset coverage-tests --parallel && \
-	ctest --preset coverage && \
+	ctest --preset coverage -j1 && \
 	COVERAGE_MIN_LINE=$(COVERAGE_MIN_LINE) ./scripts/ci/generate_coverage_report.sh
 
 sanitize:

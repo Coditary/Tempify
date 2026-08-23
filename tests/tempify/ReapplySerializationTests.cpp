@@ -144,8 +144,8 @@ TEST_CASE(ReapplySerialization_builds_blocked_error_for_origin_template_mismatch
 
     REQUIRE(std::string(error.what()).find("origin template mismatch") != std::string::npos);
     REQUIRE(std::string(error.what()).find("layered_cpp_product") != std::string::npos);
-    REQUIRE(error.origin_mismatch().has_value());
-    REQUIRE_EQ(error.origin_mismatch()->requested_template_id, std::string("basic_cpp"));
+    const auto &origin_mismatch = REQUIRE_VALUE(error.origin_mismatch());
+    REQUIRE_EQ(origin_mismatch.requested_template_id, std::string("basic_cpp"));
     REQUIRE(!error.version_transition().has_value());
 
     const std::string json = tempify::format_reapply_blocked_error_json(error);
@@ -159,8 +159,8 @@ TEST_CASE(ReapplySerialization_builds_blocked_error_for_version_transition_revie
     const tempify::ReapplyBlockedError error = tempify::build_reapply_blocked_error(report);
 
     REQUIRE(std::string(error.what()).find("pre-1.0 minor upgrade") != std::string::npos);
-    REQUIRE(error.version_transition().has_value());
-    REQUIRE_EQ(error.version_transition()->reason, std::string("pre_1_0_minor_upgrade"));
+    const auto &version_transition = REQUIRE_VALUE(error.version_transition());
+    REQUIRE_EQ(version_transition.reason, std::string("pre_1_0_minor_upgrade"));
     REQUIRE(!error.origin_mismatch().has_value());
 
     const std::string json = tempify::format_reapply_blocked_error_json(error);

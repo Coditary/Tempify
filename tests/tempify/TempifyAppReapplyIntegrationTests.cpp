@@ -102,12 +102,12 @@ TEST_CASE(TempifyApp_reapply_blocks_version_downgrade_with_structured_details) {
         REQUIRE(false);
     } catch (const tempify::ReapplyBlockedError &error) {
         REQUIRE(std::string(error.what()).find("version downgrade") != std::string::npos);
-        REQUIRE(error.version_transition().has_value());
-        REQUIRE_EQ(error.version_transition()->kind, std::string("downgrade"));
-        REQUIRE_EQ(error.version_transition()->reason, std::string("backward_version_change"));
-        REQUIRE_EQ(error.version_transition()->from_version, std::string("0.2.0"));
-        REQUIRE_EQ(error.version_transition()->to_version, std::string("0.1.0"));
-        REQUIRE_EQ(error.version_transition()->lockfile_path, std::string(".tempify-lock.json"));
+        const auto &version_transition = REQUIRE_VALUE(error.version_transition());
+        REQUIRE_EQ(version_transition.kind, std::string("downgrade"));
+        REQUIRE_EQ(version_transition.reason, std::string("backward_version_change"));
+        REQUIRE_EQ(version_transition.from_version, std::string("0.2.0"));
+        REQUIRE_EQ(version_transition.to_version, std::string("0.1.0"));
+        REQUIRE_EQ(version_transition.lockfile_path, std::string(".tempify-lock.json"));
     }
 }
 
@@ -159,12 +159,12 @@ TEST_CASE(TempifyApp_reapply_blocks_pre_1_0_minor_upgrade_with_structured_detail
         REQUIRE(false);
     } catch (const tempify::ReapplyBlockedError &error) {
         REQUIRE(std::string(error.what()).find("pre-1.0 minor upgrade") != std::string::npos);
-        REQUIRE(error.version_transition().has_value());
-        REQUIRE_EQ(error.version_transition()->kind, std::string("upgrade"));
-        REQUIRE_EQ(error.version_transition()->reason, std::string("pre_1_0_minor_upgrade"));
-        REQUIRE_EQ(error.version_transition()->from_version, std::string("0.0.9"));
-        REQUIRE_EQ(error.version_transition()->to_version, std::string("0.1.0"));
-        REQUIRE_EQ(error.version_transition()->lockfile_path, std::string(".tempify-lock.json"));
+        const auto &version_transition = REQUIRE_VALUE(error.version_transition());
+        REQUIRE_EQ(version_transition.kind, std::string("upgrade"));
+        REQUIRE_EQ(version_transition.reason, std::string("pre_1_0_minor_upgrade"));
+        REQUIRE_EQ(version_transition.from_version, std::string("0.0.9"));
+        REQUIRE_EQ(version_transition.to_version, std::string("0.1.0"));
+        REQUIRE_EQ(version_transition.lockfile_path, std::string(".tempify-lock.json"));
     }
 }
 
@@ -638,10 +638,10 @@ TEST_CASE(TempifyApp_reapply_blocks_origin_template_mismatch) {
     } catch (const tempify::ReapplyBlockedError &error) {
         REQUIRE(std::string(error.what()).find("origin template mismatch") != std::string::npos);
         REQUIRE(std::string(error.what()).find("layered_cpp_product") != std::string::npos);
-        REQUIRE(error.origin_mismatch().has_value());
-        REQUIRE_EQ(error.origin_mismatch()->lockfile_path, std::string(".tempify-lock.json"));
-        REQUIRE_EQ(error.origin_mismatch()->origin_template_id, std::string("layered_cpp_product"));
-        REQUIRE_EQ(error.origin_mismatch()->requested_template_id, std::string("basic_cpp"));
+        const auto &origin_mismatch = REQUIRE_VALUE(error.origin_mismatch());
+        REQUIRE_EQ(origin_mismatch.lockfile_path, std::string(".tempify-lock.json"));
+        REQUIRE_EQ(origin_mismatch.origin_template_id, std::string("layered_cpp_product"));
+        REQUIRE_EQ(origin_mismatch.requested_template_id, std::string("basic_cpp"));
         REQUIRE(!error.version_transition().has_value());
     }
 
