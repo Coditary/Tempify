@@ -218,3 +218,39 @@ TEST_CASE(HookTrustStore_persists_trusted_template_roots) {
     REQUIRE(trust_store_text.find("trusted_templates") != std::string::npos);
     REQUIRE(trust_store_text.find("trusted") != std::string::npos);
 }
+
+TEST_CASE(HookTrustStore_rejects_invalid_and_malformed_store_files) {
+    ScopedDirectoryCleanup data_home(std::filesystem::temp_directory_path() / "tempify-hook-trust-store-invalid-test");
+    const std::filesystem::path store_path = tempify::default_hook_trust_store_path(data_home.path());
+    const std::filesystem::path trusted_root = data_home.path() / "templates" / "trusted";
+    std::filesystem::create_directories(trusted_root);
+    tempify::HookTrustStore trust_store(store_path);
+
+    write_text_file(store_path, "{ invalid json\n");
+    REQUIRE_THROWS_AS(static_cast<void>(trust_store.is_trusted(trusted_root)), tempify::TempifyError);
+
+    write_text_file(store_path, "[]\n");
+    REQUIRE_THROWS_AS(static_cast<void>(trust_store.is_trusted(trusted_root)), tempify::TempifyError);
+}
+
+TEST_CASE(HookTrustStore_ignores_invalid_entries_and_persists_multiple_roots) {
+    ScopedDirectoryCleanup data_home(std::filesystem::temp_directory_path() / "tempify-hook-trust-store-multi-test");
+    const std::filesystem::path store_path = tempify::default_hook_trust_store_path(data_home.path());
+    const std::filesystem::path first_root = data_home.path() / "templates" / "first";
+    const std::filesystem::path second_root = data_home.path() / "templates" / "second";
+    std::filesystem::create_directories(first_root);
+    std::filesystem::create_directories(second_root);
+    tempify::HookTrustStore trust_store(store_path);
+
+    write_text_file(store_path, "{\n  \"trusted_templates\": [42, true]\n}\n");
+    REQUIRE(!trust_store.is_trusted(first_root));
+
+    trust_store.trust(first_root);
+    trust_store.trust(second_root);
+    REQUIRE(trust_store.is_trusted(first_root));
+    REQUIRE(trust_store.is_trusted(second_root));
+
+    const std::string trust_store_text = read_text_file(store_path);
+    REQUIRE(trust_store_text.find("templates/first") != std::string::npos);
+    REQUIRE(trust_store_text.find("templates/second") != std::string::npos);
+}

@@ -256,6 +256,44 @@ TEST_CASE(QuestionProcessor_group_navigation_back_reasks_previous_page) {
     REQUIRE(frontend.groups.size() >= static_cast<std::size_t>(3));
 }
 
+TEST_CASE(QuestionProcessor_derives_group_order_from_unordered_questions) {
+    tempify::TemplateManifest manifest;
+    manifest.questions = {
+        tempify::QuestionDefinition{
+            .key = "beta_value",
+            .type = "string",
+            .prompt = "Beta value",
+            .group = "Beta",
+        },
+        tempify::QuestionDefinition{
+            .key = "alpha_value",
+            .type = "string",
+            .prompt = "Alpha value",
+            .group = "Alpha",
+        },
+        tempify::QuestionDefinition{
+            .key = "general_value",
+            .type = "string",
+            .prompt = "General value",
+        },
+    };
+
+    tempify::LuaEngine lua_engine;
+    StubFrontend frontend({
+        "beta-1",
+        "alpha-1",
+        "general-1",
+    });
+
+    tempify::QuestionProcessor processor(lua_engine, frontend);
+    const std::map<std::string, std::string> values = processor.collect(manifest, {});
+
+    REQUIRE_EQ(values.at("beta_value"), std::string("beta-1"));
+    REQUIRE_EQ(values.at("alpha_value"), std::string("alpha-1"));
+    REQUIRE_EQ(values.at("general_value"), std::string("general-1"));
+    REQUIRE_EQ(frontend.groups.size(), static_cast<std::size_t>(3));
+}
+
 TEST_CASE(QuestionProcessor_review_stage_can_go_back_and_confirm) {
     const tempify::TemplateManifest manifest = load_basic_cpp_manifest();
     tempify::LuaEngine lua_engine;

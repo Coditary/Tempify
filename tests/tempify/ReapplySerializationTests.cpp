@@ -168,3 +168,16 @@ TEST_CASE(ReapplySerialization_builds_blocked_error_for_version_transition_revie
     REQUIRE(json.find("\"version_transition\": {") != std::string::npos);
     REQUIRE(json.find("\"pre_1_0_minor_upgrade\"") != std::string::npos);
 }
+
+TEST_CASE(ReapplySerialization_escapes_special_characters_in_blocked_error_json) {
+    tempify::BuildDiffReport report = make_conflict_report();
+    report.build_root = std::filesystem::path("/tmp/reapply\"target\n");
+    report.entries.front().relative_path = std::filesystem::path("conflict\\file\t.txt");
+    const tempify::ReapplyBlockedError error = tempify::build_reapply_blocked_error(report);
+
+    const std::string json = tempify::format_reapply_blocked_error_json(error);
+    REQUIRE(json.find("\\\"") != std::string::npos);
+    REQUIRE(json.find("\\n") != std::string::npos);
+    REQUIRE(json.find("\\t") != std::string::npos);
+    REQUIRE(json.find("\\\\") != std::string::npos);
+}
