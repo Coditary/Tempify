@@ -116,11 +116,16 @@ def copy_plugin_runtime(plugin_root: Path, payload_plugin_dir: Path) -> None:
 
 
 def write_packaged_default_template_repositories(target_path: Path) -> None:
+    source_path = Path(__file__).resolve().parents[2] / "default-template-repositories.json"
+    if source_path.is_file():
+        target_path.write_text(source_path.read_text(encoding="utf-8"), encoding="utf-8")
+        return
+
     payload = {
         "schemaVersion": 1,
         "repositories": [
             {
-                "id": "tempify-default",
+                "id": "tempify-registry",
                 "url": DEFAULT_TEMPLATE_REGISTRY_URL,
                 "priority": 0,
                 "enabled": True,
