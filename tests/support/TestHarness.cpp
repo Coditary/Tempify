@@ -49,8 +49,12 @@ std::vector<std::string> test_names() {
     return names;
 }
 
-TestRegistrar::TestRegistrar(std::string name, TestFunction function) {
-    registry().push_back(TestCase{std::move(name), function});
+TestRegistrar::TestRegistrar(const char *name, TestFunction function) noexcept {
+    try {
+        registry().push_back(TestCase{std::string(name), function});
+    } catch (...) {
+        std::abort();
+    }
 }
 
 AssertionFailure::AssertionFailure(const std::string &message) : std::runtime_error(message) {}

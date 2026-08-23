@@ -47,12 +47,12 @@ TEST_CASE(GenerationLock_loads_managed_files_and_template_metadata) {
                           "  }\n"
                           "}\n");
 
-    const std::optional<tempify::GenerationLockRecord> record = tempify::load_generation_lock(path);
-    REQUIRE(record.has_value());
-    REQUIRE_EQ(record->template_info.id, std::string("basic_cpp"));
-    REQUIRE_EQ(record->template_info.version, std::string("1.0.0"));
-    REQUIRE_EQ(record->build_root, std::string("/tmp/out"));
-    REQUIRE(record->managed_files.contains("README.md"));
-    REQUIRE_EQ(record->managed_file_hashes.at("README.md"), std::string("abc123"));
-    REQUIRE_EQ(record->values.at("project_name"), std::string("Demo"));
+    const std::optional<tempify::GenerationLockRecord> loaded = tempify::load_generation_lock(path);
+    const auto &record = REQUIRE_VALUE(loaded);
+    REQUIRE_EQ(record.template_info.id, std::string("basic_cpp"));
+    REQUIRE_EQ(record.template_info.version, std::string("1.0.0"));
+    REQUIRE_EQ(record.build_root, std::string("/tmp/out"));
+    REQUIRE(record.managed_files.contains("README.md"));
+    REQUIRE_EQ(record.managed_file_hashes.at("README.md"), std::string("abc123"));
+    REQUIRE_EQ(record.values.at("project_name"), std::string("Demo"));
 }

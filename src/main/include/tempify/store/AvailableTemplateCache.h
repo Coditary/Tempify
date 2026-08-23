@@ -21,7 +21,7 @@ struct AvailableTemplateRecord {
 
 class AvailableTemplateCache {
   public:
-    explicit AvailableTemplateCache(std::filesystem::path shared_root);
+    explicit AvailableTemplateCache(const std::filesystem::path &shared_root);
 
     const std::filesystem::path &file() const noexcept;
 

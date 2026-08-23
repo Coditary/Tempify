@@ -47,8 +47,11 @@ ProcessResult run_cli_posix(const std::filesystem::path &executable, const std::
     int stdout_pipe[2]{-1, -1};
     int stderr_pipe[2]{-1, -1};
     int stdin_pipe[2]{-1, -1};
-    if (::pipe(stdout_pipe) != 0 || ::pipe(stderr_pipe) != 0 || (!stdin_text.empty() && ::pipe(stdin_pipe) != 0)) {
+    if (::pipe(stdout_pipe) != 0 || ::pipe(stderr_pipe) != 0) {
         throw std::runtime_error("failed to create subprocess pipes");
+    }
+    if (!stdin_text.empty() && ::pipe(stdin_pipe) != 0) {
+        throw std::runtime_error("failed to create subprocess stdin pipe");
     }
 
     const pid_t child_pid = ::fork();
@@ -66,6 +69,9 @@ ProcessResult run_cli_posix(const std::filesystem::path &executable, const std::
         ::dup2(stdout_pipe[1], STDOUT_FILENO);
         ::dup2(stderr_pipe[1], STDERR_FILENO);
         if (!stdin_text.empty()) {
+            if (stdin_pipe[0] < 0) {
+                _exit(127);
+            }
             ::dup2(stdin_pipe[0], STDIN_FILENO);
         }
         ::close(stdout_pipe[0]);

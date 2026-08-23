@@ -109,7 +109,7 @@ TEST_CASE(TempifyConcurrencyE2E_parallel_renders_to_same_target_without_overwrit
     prepare_template_workspace(workspace.path());
     const auto env = isolated_cli_env(data_home.path());
     const std::filesystem::path &workspace_path = workspace.path();
-    const std::filesystem::path target_path = target.path();
+    const std::filesystem::path &target_path = target.path();
 
     constexpr int parallel_count = 4;
     std::vector<std::future<ProcessResult>> futures;

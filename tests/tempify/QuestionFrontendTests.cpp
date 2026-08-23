@@ -32,9 +32,9 @@ TEST_CASE(PlainCliFrontend_prompt_handles_submit_back_quit_and_eof) {
         ScopedStreamRedirect cout_redirect(std::cout, output.rdbuf());
 
         const auto result = frontend.prompt("Name: ", false);
-        REQUIRE(result.has_value());
-        REQUIRE_EQ(static_cast<int>(result->action), static_cast<int>(tempify::FrontendAction::Submit));
-        REQUIRE_EQ(result->value, std::string("alpha"));
+        const auto &prompt_result = REQUIRE_VALUE(result);
+        REQUIRE_EQ(static_cast<int>(prompt_result.action), static_cast<int>(tempify::FrontendAction::Submit));
+        REQUIRE_EQ(prompt_result.value, std::string("alpha"));
         REQUIRE(output.str().find("Name: ") != std::string::npos);
     }
 
@@ -42,16 +42,16 @@ TEST_CASE(PlainCliFrontend_prompt_handles_submit_back_quit_and_eof) {
         std::istringstream input(":back\n");
         ScopedStreamRedirect cin_redirect(std::cin, input.rdbuf());
         const auto result = frontend.prompt("Choice: ", false);
-        REQUIRE(result.has_value());
-        REQUIRE_EQ(static_cast<int>(result->action), static_cast<int>(tempify::FrontendAction::Back));
+        const auto &prompt_result = REQUIRE_VALUE(result);
+        REQUIRE_EQ(static_cast<int>(prompt_result.action), static_cast<int>(tempify::FrontendAction::Back));
     }
 
     {
         std::istringstream input(":quit\n");
         ScopedStreamRedirect cin_redirect(std::cin, input.rdbuf());
         const auto result = frontend.prompt("Choice: ", false);
-        REQUIRE(result.has_value());
-        REQUIRE_EQ(static_cast<int>(result->action), static_cast<int>(tempify::FrontendAction::Quit));
+        const auto &prompt_result = REQUIRE_VALUE(result);
+        REQUIRE_EQ(static_cast<int>(prompt_result.action), static_cast<int>(tempify::FrontendAction::Quit));
     }
 
     {
@@ -76,8 +76,8 @@ TEST_CASE(PlainCliFrontend_prompt_handles_submit_back_quit_and_eof) {
         std::istringstream input("secret\n");
         ScopedStreamRedirect cin_redirect(std::cin, input.rdbuf());
         const auto result = frontend.prompt("Password: ", true);
-        REQUIRE(result.has_value());
-        REQUIRE_EQ(result->value, std::string("secret"));
+        const auto &prompt_result = REQUIRE_VALUE(result);
+        REQUIRE_EQ(prompt_result.value, std::string("secret"));
     }
 }
 
@@ -98,17 +98,17 @@ TEST_CASE(WizardFrontend_renders_group_headers_and_prompt_actions) {
         std::istringstream input("value\n");
         ScopedStreamRedirect cin_redirect(std::cin, input.rdbuf());
         const auto result = frontend.prompt("Field: ", false);
-        REQUIRE(result.has_value());
-        REQUIRE_EQ(static_cast<int>(result->action), static_cast<int>(tempify::FrontendAction::Submit));
-        REQUIRE_EQ(result->value, std::string("value"));
+        const auto &prompt_result = REQUIRE_VALUE(result);
+        REQUIRE_EQ(static_cast<int>(prompt_result.action), static_cast<int>(tempify::FrontendAction::Submit));
+        REQUIRE_EQ(prompt_result.value, std::string("value"));
     }
 
     {
         std::istringstream input(":back\n");
         ScopedStreamRedirect cin_redirect(std::cin, input.rdbuf());
         const auto result = frontend.prompt("Field: ", false);
-        REQUIRE(result.has_value());
-        REQUIRE_EQ(static_cast<int>(result->action), static_cast<int>(tempify::FrontendAction::Back));
+        const auto &prompt_result = REQUIRE_VALUE(result);
+        REQUIRE_EQ(static_cast<int>(prompt_result.action), static_cast<int>(tempify::FrontendAction::Back));
     }
 
     {

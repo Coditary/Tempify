@@ -19,7 +19,7 @@ struct StoredTemplateRecord {
 
 class LocalTemplateStore {
   public:
-    explicit LocalTemplateStore(std::filesystem::path shared_root);
+    explicit LocalTemplateStore(const std::filesystem::path &shared_root);
 
     const std::filesystem::path &root() const noexcept;
     const std::filesystem::path &templates_root() const noexcept;

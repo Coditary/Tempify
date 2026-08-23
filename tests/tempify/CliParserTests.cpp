@@ -55,8 +55,7 @@ TEST_CASE(CliParser_parses_q_refresh_prebyte_info_doctor_validate_inspect_lint_t
 
     const tempify::CliRequest completion = parser.parse({"completion", "bash"});
     REQUIRE(completion.mode == tempify::CliMode::Completion);
-    REQUIRE(completion.completion_shell.has_value());
-    REQUIRE_EQ(*completion.completion_shell, std::string("bash"));
+    REQUIRE_EQ(REQUIRE_VALUE(completion.completion_shell), std::string("bash"));
 
     const tempify::CliRequest validate = parser.parse({"validate", "basic_cpp"});
     REQUIRE(validate.mode == tempify::CliMode::TemplateValidate);
@@ -88,8 +87,7 @@ TEST_CASE(CliParser_parses_q_refresh_prebyte_info_doctor_validate_inspect_lint_t
     const tempify::CliRequest test = parser.parse({"test", "basic_cpp", "--fixture", "ci_enabled", "--json"});
     REQUIRE(test.mode == tempify::CliMode::TemplateTest);
     REQUIRE_EQ(test.template_ref, std::string("basic_cpp"));
-    REQUIRE(test.test_fixture_name.has_value());
-    REQUIRE_EQ(*test.test_fixture_name, std::string("ci_enabled"));
+    REQUIRE_EQ(REQUIRE_VALUE(test.test_fixture_name), std::string("ci_enabled"));
     REQUIRE(!test.test_list_fixtures);
     REQUIRE(test.test_json);
     REQUIRE(!test.test_update_snapshots);
@@ -143,15 +141,13 @@ TEST_CASE(CliParser_parses_q_refresh_prebyte_info_doctor_validate_inspect_lint_t
     });
     REQUIRE(render.mode == tempify::CliMode::TemplateRender);
     REQUIRE_EQ(render.template_ref, std::string("basic_cpp"));
-    REQUIRE(render.target_dir.has_value());
-    REQUIRE_EQ(render.target_dir->string(), std::string("out-dir"));
+    REQUIRE_EQ(REQUIRE_VALUE(render.target_dir).string(), std::string("out-dir"));
     REQUIRE_EQ(render.variables.at("project_name"), std::string("App"));
     REQUIRE_EQ(render.variables.at("namespace"), std::string("core"));
     REQUIRE(render.existing_path_behavior_override.has_value());
     REQUIRE(render.existing_path_behavior_override == tempify::ExistingPathBehavior::Overwrite);
     REQUIRE(render.hook_acceptance == tempify::HookAcceptance::Ask);
-    REQUIRE(render.answers_file.has_value());
-    REQUIRE_EQ(render.answers_file->string(), std::string("answers.json"));
+    REQUIRE_EQ(REQUIRE_VALUE(render.answers_file).string(), std::string("answers.json"));
     REQUIRE(!render.write_answers_file.has_value());
     REQUIRE(render.non_interactive);
     REQUIRE(render.strict);
@@ -199,8 +195,7 @@ TEST_CASE(CliParser_parses_q_refresh_prebyte_info_doctor_validate_inspect_lint_t
     });
     REQUIRE(reapply_subcommand.mode == tempify::CliMode::TemplateRender);
     REQUIRE_EQ(reapply_subcommand.template_ref, std::string("basic_cpp"));
-    REQUIRE(reapply_subcommand.target_dir.has_value());
-    REQUIRE_EQ(reapply_subcommand.target_dir->string(), std::string("out-dir"));
+    REQUIRE_EQ(REQUIRE_VALUE(reapply_subcommand.target_dir).string(), std::string("out-dir"));
     REQUIRE(reapply_subcommand.reapply);
     REQUIRE(reapply_subcommand.diff_json);
     REQUIRE_EQ(reapply_subcommand.variables.at("project_name"), std::string("App"));
@@ -281,8 +276,7 @@ TEST_CASE(CliParser_routes_all_help_topics) {
     REQUIRE(reapply_with_args.help_topic == tempify::HelpTopic::Render);
     REQUIRE(reapply_with_args.reapply);
     REQUIRE_EQ(reapply_with_args.template_ref, std::string("basic_cpp"));
-    REQUIRE(reapply_with_args.target_dir.has_value());
-    REQUIRE_EQ(reapply_with_args.target_dir->string(), std::string("out-dir"));
+    REQUIRE_EQ(REQUIRE_VALUE(reapply_with_args.target_dir).string(), std::string("out-dir"));
 
     const tempify::CliRequest questions = parser.parse({"basic_cpp", "-q", "--help"});
     REQUIRE(questions.mode == tempify::CliMode::Help);
@@ -306,8 +300,7 @@ TEST_CASE(CliParser_routes_all_help_topics) {
     REQUIRE(render.mode == tempify::CliMode::Help);
     REQUIRE(render.help_topic == tempify::HelpTopic::Render);
     REQUIRE_EQ(render.template_ref, std::string("basic_cpp"));
-    REQUIRE(render.target_dir.has_value());
-    REQUIRE_EQ(render.target_dir->string(), std::string("out-dir"));
+    REQUIRE_EQ(REQUIRE_VALUE(render.target_dir).string(), std::string("out-dir"));
 }
 
 TEST_CASE(CliParser_rejects_invalid_assignments_unknown_options_and_extra_targets) {

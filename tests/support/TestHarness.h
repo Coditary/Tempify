@@ -21,7 +21,7 @@ const TestCase *find_test(std::string_view name);
 std::vector<std::string> test_names();
 
 struct TestRegistrar {
-    TestRegistrar(std::string name, TestFunction function);
+    TestRegistrar(const char *name, TestFunction function) noexcept;
 };
 
 class AssertionFailure : public std::runtime_error {
@@ -63,6 +63,16 @@ inline void assert_true(bool value, const char *expr, const char *file, int line
     }
 }
 
+template <typename T>
+const T &require_value(const std::optional<T> &value, const char *expr, const char *file, int line) {
+    if (!value.has_value()) {
+        std::ostringstream stream;
+        stream << file << ':' << line << " expected optional value: " << expr;
+        throw AssertionFailure(stream.str());
+    }
+    return *value;
+}
+
 template <typename Exception, typename Function>
 void assert_throws(Function &&function, const char *expr, const char *file, int line) {
     try {
@@ -89,6 +99,7 @@ void assert_throws(Function &&function, const char *expr, const char *file, int 
     static void name()
 
 #define REQUIRE(expr) ::prebyte::test::assert_true((expr), #expr, __FILE__, __LINE__)
+#define REQUIRE_VALUE(value) ::prebyte::test::require_value((value), #value, __FILE__, __LINE__)
 #define REQUIRE_EQ(left, right) ::prebyte::test::assert_equal((left), (right), #left, #right, __FILE__, __LINE__)
 #define REQUIRE_THROWS_AS(expr, exception_type)                                                                        \
     ::prebyte::test::assert_throws<exception_type>([&]() { (void)(expr); }, #expr, __FILE__, __LINE__)

@@ -93,8 +93,8 @@ std::vector<AvailableTemplateRecord> load_cache(const std::filesystem::path &pat
 
 } // namespace
 
-AvailableTemplateCache::AvailableTemplateCache(std::filesystem::path shared_root)
-    : root_(std::filesystem::absolute(std::move(shared_root))), file_(root_ / "index" / "reqpack-available.json") {}
+AvailableTemplateCache::AvailableTemplateCache(const std::filesystem::path &shared_root)
+    : root_(std::filesystem::absolute(shared_root)), file_(root_ / "index" / "reqpack-available.json") {}
 
 const std::filesystem::path &AvailableTemplateCache::file() const noexcept {
     return file_;

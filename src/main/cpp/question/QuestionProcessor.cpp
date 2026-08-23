@@ -147,8 +147,7 @@ std::map<std::string, std::string> QuestionProcessor::collect(const TemplateMani
     if (strict) {
         for (const auto &[key, value] : explicit_imported) {
             static_cast<void>(value);
-            if (!question_internal::is_question_key(manifest.questions, key) &&
-                manifest.env_defaults.find(key) == manifest.env_defaults.end()) {
+            if (!question_internal::is_question_key(manifest.questions, key) && !manifest.env_defaults.contains(key)) {
                 throw TempifyError("Unknown key '" + key + "' in answer file");
             }
         }
@@ -326,7 +325,7 @@ std::map<std::string, std::string> QuestionProcessor::collect(const TemplateMani
     if (strict) {
         for (const auto &[key, value] : explicit_imported) {
             static_cast<void>(value);
-            if (!question_internal::is_question_key(manifest.questions, key) && values.find(key) == values.end()) {
+            if (!question_internal::is_question_key(manifest.questions, key) && !values.contains(key)) {
                 throw TempifyError("Unused key '" + key + "' in answer file");
             }
         }

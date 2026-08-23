@@ -119,9 +119,9 @@ void save_index(const std::filesystem::path &path, const std::vector<StoredTempl
 
 } // namespace
 
-LocalTemplateStore::LocalTemplateStore(std::filesystem::path shared_root)
-    : root_(std::filesystem::absolute(std::move(shared_root))), templates_root_(root_ / "templates"),
-      index_root_(root_ / "index"), index_file_(index_root_ / "templates.json") {}
+LocalTemplateStore::LocalTemplateStore(const std::filesystem::path &shared_root)
+    : root_(std::filesystem::absolute(shared_root)), templates_root_(root_ / "templates"), index_root_(root_ / "index"),
+      index_file_(index_root_ / "templates.json") {}
 
 const std::filesystem::path &LocalTemplateStore::root() const noexcept {
     return root_;

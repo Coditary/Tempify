@@ -185,7 +185,7 @@ TEST_CASE(TempifySharedStateConcurrencyE2E_concurrent_renders_to_same_target_lea
     prepare_template_workspace(workspace.path());
     const auto env = isolated_cli_env(data_home.path());
     const std::filesystem::path &workspace_path = workspace.path();
-    const std::filesystem::path target_path = target.path();
+    const std::filesystem::path &target_path = target.path();
 
     constexpr int parallel_count = 4;
     std::vector<std::future<ProcessResult>> futures;
@@ -219,7 +219,7 @@ TEST_CASE(TempifySharedStateConcurrencyE2E_concurrent_reapply_on_same_target_del
     prepare_template_workspace(workspace.path());
     const auto env = isolated_cli_env(data_home.path());
     const std::filesystem::path &workspace_path = workspace.path();
-    const std::filesystem::path target_path = target.path();
+    const std::filesystem::path &target_path = target.path();
 
     REQUIRE_EQ(run_cli(basic_cpp_render_args(target_path, "reapply-target"), workspace_path, env).exit_code, 0);
     inject_stale_managed_file(target_path, "old-managed.txt", "removed-by-template-update\n");

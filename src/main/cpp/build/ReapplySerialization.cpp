@@ -375,10 +375,11 @@ std::string format_reapply_blocked_error_json(const ReapplyBlockedError &error) 
     append_json_string_array(stream, "conflict", error.conflict_paths(), true, 4);
     append_json_string_array(stream, "review", error.review_paths(), true, 4);
     stream << "    \"origin_mismatch\": ";
-    if (!error.origin_mismatch().has_value()) {
+    const std::optional<ReapplyOriginMismatchInfo> &origin_mismatch = error.origin_mismatch();
+    if (!origin_mismatch.has_value()) {
         stream << "null,\n";
     } else {
-        const auto &mismatch = error.origin_mismatch().value();
+        const ReapplyOriginMismatchInfo &mismatch = *origin_mismatch;
         stream << "{\n";
         stream << "      \"lockfile\": \"" << json_escape(mismatch.lockfile_path) << "\",\n";
         stream << "      \"origin_template\": {\n";
@@ -392,10 +393,11 @@ std::string format_reapply_blocked_error_json(const ReapplyBlockedError &error) 
         stream << "    },\n";
     }
     stream << "    \"version_transition\": ";
-    if (!error.version_transition().has_value()) {
+    const std::optional<ReapplyVersionTransitionInfo> &version_transition = error.version_transition();
+    if (!version_transition.has_value()) {
         stream << "null\n";
     } else {
-        const auto &transition = error.version_transition().value();
+        const ReapplyVersionTransitionInfo &transition = *version_transition;
         stream << "{\n";
         stream << "      \"lockfile\": \"" << json_escape(transition.lockfile_path) << "\",\n";
         stream << "      \"kind\": \"" << json_escape(transition.kind) << "\",\n";

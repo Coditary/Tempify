@@ -41,10 +41,8 @@ TEST_CASE(Paths_resolve_tempify_data_root_prefers_xdg_and_workspace_templates_ro
     write_text_file(workspace.path() / ".tempify" / "config.json", "{}\n");
     const auto templates_root = tempify::find_workspace_templates_root(workspace.path() / "nested" / "deep");
     const auto config_file = tempify::find_workspace_config_file(workspace.path() / "nested" / "deep");
-    REQUIRE(templates_root.has_value());
-    REQUIRE(config_file.has_value());
-    REQUIRE_EQ(templates_root.value(), workspace.path() / "templates");
-    REQUIRE_EQ(config_file.value(), workspace.path() / ".tempify" / "config.json");
+    REQUIRE_EQ(REQUIRE_VALUE(templates_root), workspace.path() / "templates");
+    REQUIRE_EQ(REQUIRE_VALUE(config_file), workspace.path() / ".tempify" / "config.json");
 }
 
 TEST_CASE(LocalTemplateStore_missing_index_returns_empty) {
@@ -87,8 +85,7 @@ TEST_CASE(LocalTemplateStore_refresh_writes_index_and_lists_shared_templates) {
     REQUIRE(read_text_file(store.index_file()).find("sample_tpl") != std::string::npos);
 
     const auto found = store.find_template("sample_tpl");
-    REQUIRE(found.has_value());
-    REQUIRE_EQ(found.value().id, std::string("sample_tpl"));
+    REQUIRE_EQ(REQUIRE_VALUE(found).id, std::string("sample_tpl"));
     REQUIRE(!store.find_template("missing").has_value());
 }
 
@@ -153,8 +150,7 @@ TEST_CASE(AvailableTemplateCache_loads_records_from_reqpack_cache) {
     REQUIRE_EQ(entries[0].source_subdir, std::string("java-xyz"));
 
     const auto found = cache.find_template("java-xyz");
-    REQUIRE(found.has_value());
-    REQUIRE_EQ(found.value().id, std::string("java-xyz"));
+    REQUIRE_EQ(REQUIRE_VALUE(found).id, std::string("java-xyz"));
     REQUIRE(!cache.find_template("missing").has_value());
 }
 
@@ -191,12 +187,11 @@ TEST_CASE(TempifyConfig_load_and_merge_support_defaults_and_render_overlays) {
     REQUIRE_EQ(merged.defaults.at("project_name"), std::string("Workspace App"));
     REQUIRE_EQ(merged.defaults.at("include_ci"), std::string("false"));
     REQUIRE_EQ(merged.defaults.at("author"), std::string("Workspace Author"));
-    REQUIRE(merged.hook_acceptance.has_value());
-    REQUIRE(merged.hook_acceptance.value() == tempify::HookAcceptance::Yes);
+    REQUIRE(REQUIRE_VALUE(merged.hook_acceptance) == tempify::HookAcceptance::Yes);
     REQUIRE(merged.hook_timeout_ms.has_value());
-    REQUIRE_EQ(merged.hook_timeout_ms.value(), 1234);
+    REQUIRE_EQ(REQUIRE_VALUE(merged.hook_timeout_ms), 1234);
     REQUIRE(merged.existing_path_behavior.has_value());
-    REQUIRE(merged.existing_path_behavior.value() == tempify::ExistingPathBehavior::Skip);
+    REQUIRE(REQUIRE_VALUE(merged.existing_path_behavior) == tempify::ExistingPathBehavior::Skip);
 }
 
 TEST_CASE(TempifyConfig_unknown_keys_throw) {
