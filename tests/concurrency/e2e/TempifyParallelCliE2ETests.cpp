@@ -2,7 +2,6 @@
 #include "E2ETestSupport.h"
 #include "TestHarness.h"
 
-#include <array>
 #include <future>
 #include <string>
 #include <vector>
@@ -43,31 +42,32 @@ TEST_CASE(TempifyConcurrencyE2E_parallel_renders_succeed_in_subprocesses) {
     prepare_template_workspace(workspace.path());
     const auto env = isolated_cli_env(data_home.path());
 
+    ScopedDirectoryCleanup target0(std::filesystem::temp_directory_path() / "tempify-concurrency-e2e-target-0");
+    ScopedDirectoryCleanup target1(std::filesystem::temp_directory_path() / "tempify-concurrency-e2e-target-1");
+    ScopedDirectoryCleanup target2(std::filesystem::temp_directory_path() / "tempify-concurrency-e2e-target-2");
+    ScopedDirectoryCleanup target3(std::filesystem::temp_directory_path() / "tempify-concurrency-e2e-target-3");
     constexpr int parallel_count = 4;
-    std::array<std::filesystem::path, parallel_count> target_paths;
-    std::array<ScopedDirectoryCleanup, parallel_count> targets{{
-        ScopedDirectoryCleanup(std::filesystem::temp_directory_path() / "tempify-concurrency-e2e-target-0"),
-        ScopedDirectoryCleanup(std::filesystem::temp_directory_path() / "tempify-concurrency-e2e-target-1"),
-        ScopedDirectoryCleanup(std::filesystem::temp_directory_path() / "tempify-concurrency-e2e-target-2"),
-        ScopedDirectoryCleanup(std::filesystem::temp_directory_path() / "tempify-concurrency-e2e-target-3"),
-    }};
-    for (int index = 0; index < parallel_count; ++index) {
-        target_paths[static_cast<std::size_t>(index)] = targets[static_cast<std::size_t>(index)].path();
-    }
+    const std::vector<std::filesystem::path> target_paths = {
+        target0.path(),
+        target1.path(),
+        target2.path(),
+        target3.path(),
+    };
 
     std::vector<std::future<ProcessResult>> futures;
     futures.reserve(parallel_count);
     for (int index = 0; index < parallel_count; ++index) {
         const std::string slug = "parallel-" + std::to_string(index);
-        futures.push_back(std::async(std::launch::async, [workspace_path = workspace.path(), env, args = parallel_render_args(target_paths[static_cast<std::size_t>(index)], slug)]() {
+        futures.push_back(std::async(std::launch::async, [workspace_path = workspace.path(), env,
+                                                          args = parallel_render_args(target_paths.at(static_cast<std::size_t>(index)), slug)]() {
             return run_cli(args, workspace_path, env);
         }));
     }
 
     for (int index = 0; index < parallel_count; ++index) {
-        const ProcessResult result = futures[static_cast<std::size_t>(index)].get();
+        const ProcessResult result = futures.at(static_cast<std::size_t>(index)).get();
         REQUIRE_EQ(result.exit_code, 0);
-        const std::filesystem::path target_path = target_paths[static_cast<std::size_t>(index)];
+        const std::filesystem::path &target_path = target_paths.at(static_cast<std::size_t>(index));
         REQUIRE(std::filesystem::is_regular_file(target_path / "README.md"));
         REQUIRE(read_text_file(target_path / "README.md").find("# Parallel parallel-") != std::string::npos);
     }
@@ -124,7 +124,7 @@ TEST_CASE(TempifyConcurrencyE2E_parallel_renders_to_same_target_without_overwrit
     std::size_t success_count = 0;
     std::size_t failure_count = 0;
     for (int index = 0; index < parallel_count; ++index) {
-        const ProcessResult result = futures[static_cast<std::size_t>(index)].get();
+        const ProcessResult result = futures.at(static_cast<std::size_t>(index)).get();
         if (result.exit_code == 0) {
             ++success_count;
         } else {
