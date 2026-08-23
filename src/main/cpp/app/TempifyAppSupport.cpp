@@ -173,6 +173,12 @@ std::filesystem::path resolve_template_root(const CliRequest &request, const Tem
         throw TempifyError("Shared template '" + request.template_ref + "' is missing on disk. Run `tempify refresh`.");
     }
 
+    const auto available = catalog.available_index.find(request.template_ref);
+    if (available != catalog.available_index.end()) {
+        throw TempifyError("Template '" + request.template_ref + "' is in the catalog but not installed locally. "
+                           "Install it with: rqp install tempify " + request.template_ref);
+    }
+
     throw TempifyError("Template not found: " + request.template_ref);
 }
 
