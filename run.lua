@@ -570,6 +570,14 @@ local function resolve_reference(base, value)
     return resolve_local_path(base, text)
 end
 
+local function normalize_git_clone_url(url)
+    local text = trim(url)
+    if starts_with(text, "git+") then
+        return text:sub(5)
+    end
+    return text
+end
+
 local function read_text_from_url(context, url, output_base)
     if not is_remote_url(url) and not starts_with(url, "file://") then
         return read_file(url), nil
@@ -591,7 +599,7 @@ local function read_text_from_url(context, url, output_base)
     local target = extension ~= "" and (base .. extension) or base
 
     if context ~= nil and context.net ~= nil and type(context.net.download) == "function" then
-        local downloaded = context.net.download(url, base)
+        local downloaded = context.net.download(url, target)
         if downloaded then
             return read_file(target), nil
         end
@@ -1224,7 +1232,7 @@ local function resolve_template_root_from_catalog(record, context)
     if trim(record.source.ref) ~= "" then
         clone_command = clone_command .. "--branch " .. shell_quote(record.source.ref) .. " "
     end
-    clone_command = clone_command .. shell_quote(source_url) .. " " .. shell_quote(clone_root)
+    clone_command = clone_command .. shell_quote(normalize_git_clone_url(source_url)) .. " " .. shell_quote(clone_root)
 
     local cloned, clone_output = run_shell(clone_command)
     if not cloned then
