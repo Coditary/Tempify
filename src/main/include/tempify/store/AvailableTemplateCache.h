@@ -20,17 +20,17 @@ struct AvailableTemplateRecord {
 };
 
 class AvailableTemplateCache {
-public:
-    explicit AvailableTemplateCache(std::filesystem::path shared_root);
+  public:
+    explicit AvailableTemplateCache(const std::filesystem::path &shared_root);
 
-    const std::filesystem::path& file() const noexcept;
+    const std::filesystem::path &file() const noexcept;
 
     std::vector<AvailableTemplateRecord> list_templates() const;
-    std::optional<AvailableTemplateRecord> find_template(const std::string& id) const;
+    std::optional<AvailableTemplateRecord> find_template(const std::string &id) const;
 
-private:
+  private:
     std::filesystem::path root_;
     std::filesystem::path file_;
 };
 
-}
+} // namespace tempify

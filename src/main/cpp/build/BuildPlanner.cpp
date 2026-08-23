@@ -12,13 +12,13 @@ namespace tempify {
 
 namespace {
 
-std::filesystem::path normalize_relative_output_path(const std::filesystem::path& path) {
+std::filesystem::path normalize_relative_output_path(const std::filesystem::path &path) {
     if (path.empty() || path.is_absolute()) {
         throw TempifyError("Rendered output path must be relative and non-empty");
     }
 
     const std::filesystem::path normalized = path.lexically_normal();
-    for (const auto& part : normalized) {
+    for (const auto &part : normalized) {
         if (part == "..") {
             throw TempifyError("Rendered output path escapes build root: " + normalized.string());
         }
@@ -27,9 +27,8 @@ std::filesystem::path normalize_relative_output_path(const std::filesystem::path
     return normalized;
 }
 
-void collect_parent_directories(std::set<std::filesystem::path>& directories,
-                                const std::filesystem::path& root,
-                                const std::filesystem::path& output_path) {
+void collect_parent_directories(std::set<std::filesystem::path> &directories, const std::filesystem::path &root,
+                                const std::filesystem::path &output_path) {
     std::filesystem::path current = output_path.parent_path();
     while (!current.empty() && current != root && current.native().size() >= root.native().size()) {
         directories.insert(current);
@@ -37,16 +36,16 @@ void collect_parent_directories(std::set<std::filesystem::path>& directories,
     }
 }
 
-int path_depth(const std::filesystem::path& path) {
+int path_depth(const std::filesystem::path &path) {
     int depth = 0;
-    for (const auto& part : path) {
+    for (const auto &part : path) {
         static_cast<void>(part);
         ++depth;
     }
     return depth;
 }
 
-const LayoutRule* layout_rule_for(const TemplateManifest& manifest, const std::string& relative_path) {
+const LayoutRule *layout_rule_for(const TemplateManifest &manifest, const std::string &relative_path) {
     for (auto it = manifest.layout_rules.rbegin(); it != manifest.layout_rules.rend(); ++it) {
         if (it->source == relative_path) {
             return &*it;
@@ -55,14 +54,12 @@ const LayoutRule* layout_rule_for(const TemplateManifest& manifest, const std::s
     return nullptr;
 }
 
-}
+} // namespace
 
-BuildPlanner::BuildPlanner(const PrebyteRenderer& renderer)
-    : renderer_(renderer) {}
+BuildPlanner::BuildPlanner(const PrebyteRenderer &renderer) : renderer_(renderer) {}
 
-BuildPlan BuildPlanner::plan(const TemplateManifest& manifest,
-                             const std::map<std::string, std::string>& values,
-                             const std::optional<std::filesystem::path>& explicit_target) const {
+BuildPlan BuildPlanner::plan(const TemplateManifest &manifest, const std::map<std::string, std::string> &values,
+                             const std::optional<std::filesystem::path> &explicit_target) const {
     prebyte::Prebyte engine;
     renderer_.configure(engine, values, manifest);
 
@@ -74,12 +71,11 @@ BuildPlan BuildPlanner::plan(const TemplateManifest& manifest,
     plan.post_hook_path = manifest.post_hook_path;
 
     if (explicit_target.has_value()) {
-        plan.build_root = explicit_target->is_absolute()
-            ? *explicit_target
-            : std::filesystem::current_path() / *explicit_target;
+        plan.build_root =
+            explicit_target->is_absolute() ? *explicit_target : std::filesystem::current_path() / *explicit_target;
     } else {
-        const std::string rendered = renderer_.render_string(engine,
-            manifest.output_path_template.empty() ? manifest.info.id : manifest.output_path_template);
+        const std::string rendered = renderer_.render_string(
+            engine, manifest.output_path_template.empty() ? manifest.info.id : manifest.output_path_template);
         if (rendered.empty()) {
             throw TempifyError("Rendered build root is empty for template " + manifest.info.id);
         }
@@ -93,13 +89,15 @@ BuildPlan BuildPlanner::plan(const TemplateManifest& manifest,
     std::set<std::filesystem::path> directories;
     directories.insert(plan.build_root);
 
-    for (const auto& raw_directory : manifest.directories) {
-        if (const LayoutRule* rule = layout_rule_for(manifest, raw_directory.relative_path); rule != nullptr && rule->exclude) {
+    for (const auto &raw_directory : manifest.directories) {
+        if (const LayoutRule *rule = layout_rule_for(manifest, raw_directory.relative_path);
+            rule != nullptr && rule->exclude) {
             continue;
         }
 
         const std::string layout_source = [&]() {
-            if (const LayoutRule* rule = layout_rule_for(manifest, raw_directory.relative_path); rule != nullptr && rule->target.has_value()) {
+            if (const LayoutRule *rule = layout_rule_for(manifest, raw_directory.relative_path);
+                rule != nullptr && rule->target.has_value()) {
                 return *rule->target;
             }
             return raw_directory.relative_path;
@@ -114,19 +112,21 @@ BuildPlan BuildPlanner::plan(const TemplateManifest& manifest,
     }
 
     std::map<std::string, std::filesystem::path> output_collision_guard;
-    for (const auto& source : manifest.files) {
+    for (const auto &source : manifest.files) {
         if (source.excluded) {
             continue;
         }
-        const LayoutRule* rule = layout_rule_for(manifest, source.relative_path);
+        const LayoutRule *rule = layout_rule_for(manifest, source.relative_path);
         if (rule != nullptr && rule->exclude) {
             continue;
         }
 
-        const std::string logical_source = (rule != nullptr && rule->target.has_value()) ? *rule->target : source.relative_path;
-        std::filesystem::path output_relative = normalize_relative_output_path(
-            std::filesystem::path(renderer_.render_string(engine, logical_source)));
-        const bool render_with_prebyte = (rule != nullptr && rule->render.has_value()) ? *rule->render : source.render_with_prebyte;
+        const std::string logical_source =
+            (rule != nullptr && rule->target.has_value()) ? *rule->target : source.relative_path;
+        std::filesystem::path output_relative =
+            normalize_relative_output_path(std::filesystem::path(renderer_.render_string(engine, logical_source)));
+        const bool render_with_prebyte =
+            (rule != nullptr && rule->render.has_value()) ? *rule->render : source.render_with_prebyte;
         if (render_with_prebyte) {
             output_relative.replace_extension();
         }
@@ -148,18 +148,18 @@ BuildPlan BuildPlanner::plan(const TemplateManifest& manifest,
     }
 
     plan.directories.assign(directories.begin(), directories.end());
-    std::sort(plan.directories.begin(), plan.directories.end(), [](const auto& left, const auto& right) {
+    std::sort(plan.directories.begin(), plan.directories.end(), [](const auto &left, const auto &right) {
         if (path_depth(left) == path_depth(right)) {
             return left.generic_string() < right.generic_string();
         }
         return path_depth(left) < path_depth(right);
     });
 
-    std::sort(plan.files.begin(), plan.files.end(), [](const PlannedFile& left, const PlannedFile& right) {
+    std::sort(plan.files.begin(), plan.files.end(), [](const PlannedFile &left, const PlannedFile &right) {
         return left.output_path.generic_string() < right.output_path.generic_string();
     });
 
     return plan;
 }
 
-}
+} // namespace tempify

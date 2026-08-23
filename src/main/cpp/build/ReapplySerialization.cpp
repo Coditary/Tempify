@@ -17,17 +17,29 @@ struct ReapplyPathGroups {
     std::vector<std::string> review_paths;
 };
 
-std::string json_escape(const std::string& value) {
+std::string json_escape(const std::string &value) {
     std::string escaped;
     escaped.reserve(value.size());
     for (const char ch : value) {
         switch (ch) {
-        case '\\': escaped += "\\\\"; break;
-        case '"': escaped += "\\\""; break;
-        case '\n': escaped += "\\n"; break;
-        case '\r': escaped += "\\r"; break;
-        case '\t': escaped += "\\t"; break;
-        default: escaped.push_back(ch); break;
+        case '\\':
+            escaped += "\\\\";
+            break;
+        case '"':
+            escaped += "\\\"";
+            break;
+        case '\n':
+            escaped += "\\n";
+            break;
+        case '\r':
+            escaped += "\\r";
+            break;
+        case '\t':
+            escaped += "\\t";
+            break;
+        default:
+            escaped.push_back(ch);
+            break;
         }
     }
     return escaped;
@@ -77,7 +89,7 @@ std::string update_policy_action_name(const BuildUpdatePolicyAction action) {
     return "unavailable";
 }
 
-std::string template_label(const std::string& template_id, const std::string& template_version) {
+std::string template_label(const std::string &template_id, const std::string &template_version) {
     if (template_id.empty() && template_version.empty()) {
         return "<unknown>";
     }
@@ -90,15 +102,15 @@ std::string template_label(const std::string& template_id, const std::string& te
     return template_id + "@" + template_version;
 }
 
-std::string version_label(const std::string& version) {
+std::string version_label(const std::string &version) {
     return version.empty() ? std::string{"<unknown>"} : version;
 }
 
-bool update_requires_review(const BuildDiffReport& report) {
+bool update_requires_review(const BuildDiffReport &report) {
     return report.update_policy.action == BuildUpdatePolicyAction::Review;
 }
 
-std::string version_transition_summary(const ReapplyVersionTransitionInfo& transition) {
+std::string version_transition_summary(const ReapplyVersionTransitionInfo &transition) {
     if (transition.kind == "downgrade") {
         return "version downgrade";
     }
@@ -114,7 +126,7 @@ std::string version_transition_summary(const ReapplyVersionTransitionInfo& trans
     return "version transition requires review";
 }
 
-std::string metadata_review_path(const BuildDiffReport& report) {
+std::string metadata_review_path(const BuildDiffReport &report) {
     if (!report.origin.detected || !update_requires_review(report)) {
         return {};
     }
@@ -123,16 +135,17 @@ std::string metadata_review_path(const BuildDiffReport& report) {
     }
 
     std::error_code error;
-    const std::filesystem::path relative = std::filesystem::relative(report.origin.lockfile_path, report.build_root, error);
+    const std::filesystem::path relative =
+        std::filesystem::relative(report.origin.lockfile_path, report.build_root, error);
     if (!error && !relative.empty()) {
         return relative.generic_string();
     }
     return report.origin.lockfile_path.filename().generic_string();
 }
 
-ReapplyPathGroups collect_reapply_path_groups(const BuildDiffReport& report) {
+ReapplyPathGroups collect_reapply_path_groups(const BuildDiffReport &report) {
     ReapplyPathGroups groups;
-    for (const auto& entry : report.entries) {
+    for (const auto &entry : report.entries) {
         const std::string path = entry.relative_path.generic_string();
         switch (entry.reapply_action) {
         case BuildReapplyAction::None:
@@ -159,17 +172,15 @@ ReapplyPathGroups collect_reapply_path_groups(const BuildDiffReport& report) {
     }
 
     const std::string review_path = metadata_review_path(report);
-    if (!review_path.empty() && std::find(groups.review_paths.begin(), groups.review_paths.end(), review_path) == groups.review_paths.end()) {
+    if (!review_path.empty() &&
+        std::find(groups.review_paths.begin(), groups.review_paths.end(), review_path) == groups.review_paths.end()) {
         groups.review_paths.push_back(review_path);
     }
     return groups;
 }
 
-void append_json_string_array(std::ostringstream& stream,
-                              const std::string& key,
-                              const std::vector<std::string>& values,
-                              const bool trailing_comma,
-                              const int indent = 2) {
+void append_json_string_array(std::ostringstream &stream, const std::string &key,
+                              const std::vector<std::string> &values, const bool trailing_comma, const int indent = 2) {
     const std::string outer(indent, ' ');
     const std::string inner(indent + 2, ' ');
     stream << outer << '"' << key << "\": [\n";
@@ -187,7 +198,7 @@ void append_json_string_array(std::ostringstream& stream,
     stream << '\n';
 }
 
-std::string format_path_list(const std::vector<std::string>& paths) {
+std::string format_path_list(const std::vector<std::string> &paths) {
     if (paths.empty()) {
         return {};
     }
@@ -204,11 +215,10 @@ std::string format_path_list(const std::vector<std::string>& paths) {
     return stream.str();
 }
 
-}
+} // namespace
 
-std::string format_reapply_result_text(const std::string& template_id,
-                                       const std::filesystem::path& build_root,
-                                       const BuildDiffReport& report) {
+std::string format_reapply_result_text(const std::string &template_id, const std::filesystem::path &build_root,
+                                       const BuildDiffReport &report) {
     std::ostringstream stream;
     stream << "Reapplied " << template_id << " -> " << build_root.string() << '\n';
     stream << "Origin template: " << template_label(report.origin.template_id, report.origin.template_version) << '\n';
@@ -216,8 +226,8 @@ std::string format_reapply_result_text(const std::string& template_id,
     stream << "Update policy: " << update_policy_action_name(report.update_policy.action) << '\n';
     stream << "Next step: " << report.update_policy.next_step << '\n';
     if (report.origin.detected && report.origin.matches_requested_template) {
-        stream << "Update version: " << version_label(report.update.from_version)
-               << " -> " << version_label(report.update.to_version) << '\n';
+        stream << "Update version: " << version_label(report.update.from_version) << " -> "
+               << version_label(report.update.to_version) << '\n';
     }
     stream << "Created: " << report.reapply.create_count << '\n';
     stream << "Updated: " << report.reapply.update_count << '\n';
@@ -227,7 +237,7 @@ std::string format_reapply_result_text(const std::string& template_id,
     return stream.str();
 }
 
-std::string format_reapply_result_json(const BuildDiffReport& report) {
+std::string format_reapply_result_json(const BuildDiffReport &report) {
     const ReapplyPathGroups groups = collect_reapply_path_groups(report);
 
     std::ostringstream stream;
@@ -241,8 +251,10 @@ std::string format_reapply_result_json(const BuildDiffReport& report) {
     stream << "  \"build_root\": \"" << json_escape(report.build_root.string()) << "\",\n";
     stream << "  \"origin\": {\n";
     stream << "    \"detected\": " << (report.origin.detected ? "true" : "false") << ",\n";
-    stream << "    \"matches_requested_template\": " << (report.origin.matches_requested_template ? "true" : "false") << ",\n";
-    stream << "    \"matches_requested_version\": " << (report.origin.matches_requested_version ? "true" : "false") << ",\n";
+    stream << "    \"matches_requested_template\": " << (report.origin.matches_requested_template ? "true" : "false")
+           << ",\n";
+    stream << "    \"matches_requested_version\": " << (report.origin.matches_requested_version ? "true" : "false")
+           << ",\n";
     stream << "    \"lockfile\": \"" << json_escape(report.origin.lockfile_path.string()) << "\",\n";
     stream << "    \"template_id\": \"" << json_escape(report.origin.template_id) << "\",\n";
     stream << "    \"template_version\": \"" << json_escape(report.origin.template_version) << "\",\n";
@@ -283,7 +295,7 @@ std::string format_reapply_result_json(const BuildDiffReport& report) {
     return stream.str();
 }
 
-ReapplyBlockedError build_reapply_blocked_error(const BuildDiffReport& report) {
+ReapplyBlockedError build_reapply_blocked_error(const BuildDiffReport &report) {
     const ReapplyPathGroups groups = collect_reapply_path_groups(report);
     const std::string review_gate_path = metadata_review_path(report);
     std::vector<std::string> review_paths = groups.review_paths;
@@ -301,12 +313,9 @@ ReapplyBlockedError build_reapply_blocked_error(const BuildDiffReport& report) {
             .requested_template_version = report.template_version,
         };
     }
-    if (report.update_policy.action == BuildUpdatePolicyAction::Review
-        && report.origin.detected
-        && report.origin.matches_requested_template
-        && report.update.kind != BuildUpdateKind::NoOrigin
-        && report.update.kind != BuildUpdateKind::TemplateMismatch
-        && !review_gate_path.empty()) {
+    if (report.update_policy.action == BuildUpdatePolicyAction::Review && report.origin.detected &&
+        report.origin.matches_requested_template && report.update.kind != BuildUpdateKind::NoOrigin &&
+        report.update.kind != BuildUpdateKind::TemplateMismatch && !review_gate_path.empty()) {
         version_transition = ReapplyVersionTransitionInfo{
             .lockfile_path = review_gate_path,
             .kind = update_kind_name(report.update.kind),
@@ -352,14 +361,11 @@ ReapplyBlockedError build_reapply_blocked_error(const BuildDiffReport& report) {
         stream << "status unavailable";
     }
     stream << ". Run `tempify <template-id> <target> --diff` to inspect.";
-    return ReapplyBlockedError(stream.str(),
-                               std::move(groups.conflict_paths),
-                               std::move(groups.review_paths),
-                               std::move(origin_mismatch),
+    return ReapplyBlockedError(stream.str(), groups.conflict_paths, std::move(review_paths), std::move(origin_mismatch),
                                std::move(version_transition));
 }
 
-std::string format_reapply_blocked_error_json(const ReapplyBlockedError& error) {
+std::string format_reapply_blocked_error_json(const ReapplyBlockedError &error) {
     std::ostringstream stream;
     stream << "{\n";
     stream << "  \"status\": \"error\",\n";
@@ -369,10 +375,11 @@ std::string format_reapply_blocked_error_json(const ReapplyBlockedError& error) 
     append_json_string_array(stream, "conflict", error.conflict_paths(), true, 4);
     append_json_string_array(stream, "review", error.review_paths(), true, 4);
     stream << "    \"origin_mismatch\": ";
-    if (!error.origin_mismatch().has_value()) {
+    const std::optional<ReapplyOriginMismatchInfo> &origin_mismatch = error.origin_mismatch();
+    if (!origin_mismatch.has_value()) {
         stream << "null,\n";
     } else {
-        const auto& mismatch = *error.origin_mismatch();
+        const ReapplyOriginMismatchInfo &mismatch = *origin_mismatch;
         stream << "{\n";
         stream << "      \"lockfile\": \"" << json_escape(mismatch.lockfile_path) << "\",\n";
         stream << "      \"origin_template\": {\n";
@@ -386,10 +393,11 @@ std::string format_reapply_blocked_error_json(const ReapplyBlockedError& error) 
         stream << "    },\n";
     }
     stream << "    \"version_transition\": ";
-    if (!error.version_transition().has_value()) {
+    const std::optional<ReapplyVersionTransitionInfo> &version_transition = error.version_transition();
+    if (!version_transition.has_value()) {
         stream << "null\n";
     } else {
-        const auto& transition = *error.version_transition();
+        const ReapplyVersionTransitionInfo &transition = *version_transition;
         stream << "{\n";
         stream << "      \"lockfile\": \"" << json_escape(transition.lockfile_path) << "\",\n";
         stream << "      \"kind\": \"" << json_escape(transition.kind) << "\",\n";
@@ -403,4 +411,4 @@ std::string format_reapply_blocked_error_json(const ReapplyBlockedError& error) 
     return stream.str();
 }
 
-}
+} // namespace tempify

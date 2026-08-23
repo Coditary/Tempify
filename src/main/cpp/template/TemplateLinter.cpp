@@ -7,27 +7,27 @@ namespace tempify {
 
 namespace {
 
-std::string describe_question(const QuestionDefinition& question) {
-    return question.source_path.empty()
-        ? question.key
-        : question.key + " (" + question.source_path.string() + "#" + std::to_string(question.source_index) + ")";
+std::string describe_question(const QuestionDefinition &question) {
+    return question.source_path.empty() ? question.key
+                                        : question.key + " (" + question.source_path.string() + "#" +
+                                              std::to_string(question.source_index) + ")";
 }
 
-bool has_matching_source_root(const TemplateManifest& manifest,
-                              const std::filesystem::path& path) {
-    for (const auto& source_root : manifest.source_roots) {
+bool has_matching_source_root(const TemplateManifest &manifest, const std::filesystem::path &path) {
+    for (const auto &source_root : manifest.source_roots) {
         const auto root = source_root.path.lexically_normal().generic_string();
         const auto candidate = path.lexically_normal().generic_string();
-        if (candidate == root || (candidate.size() > root.size() && candidate.starts_with(root) && candidate[root.size()] == '/')) {
+        if (candidate == root ||
+            (candidate.size() > root.size() && candidate.starts_with(root) && candidate[root.size()] == '/')) {
             return true;
         }
     }
     return false;
 }
 
-}
+} // namespace
 
-std::vector<std::string> TemplateLinter::lint(const TemplateManifest& manifest) const {
+std::vector<std::string> TemplateLinter::lint(const TemplateManifest &manifest) const {
     std::vector<std::string> warnings;
 
     if (manifest.info.description.empty()) {
@@ -38,11 +38,11 @@ std::vector<std::string> TemplateLinter::lint(const TemplateManifest& manifest) 
     }
 
     std::set<std::string> layout_sources;
-    for (const auto& rule : manifest.layout_rules) {
+    for (const auto &rule : manifest.layout_rules) {
         layout_sources.insert(rule.source);
     }
 
-    for (const auto& question : manifest.questions) {
+    for (const auto &question : manifest.questions) {
         if (question.prompt.empty()) {
             warnings.push_back("question missing prompt: " + describe_question(question));
         }
@@ -57,16 +57,17 @@ std::vector<std::string> TemplateLinter::lint(const TemplateManifest& manifest) 
         }
     }
 
-    for (const auto& file : manifest.files) {
+    for (const auto &file : manifest.files) {
         if (!has_matching_source_root(manifest, file.source_path)) {
             warnings.push_back("file source outside declared source roots: " + file.source_path.string());
         }
-        if (file.render_with_prebyte && !layout_sources.contains(file.relative_path) && !file.relative_path.ends_with(".pbt")) {
+        if (file.render_with_prebyte && !layout_sources.contains(file.relative_path) &&
+            !file.relative_path.ends_with(".pbt")) {
             warnings.push_back("rendered file does not use .pbt extension: " + file.relative_path);
         }
     }
 
-    for (const auto& rule : manifest.layout_rules) {
+    for (const auto &rule : manifest.layout_rules) {
         if (!rule.exclude && !rule.target.has_value()) {
             warnings.push_back("layout rule relies on implicit target path for source: " + rule.source);
         }
@@ -75,15 +76,14 @@ std::vector<std::string> TemplateLinter::lint(const TemplateManifest& manifest) 
     return warnings;
 }
 
-std::string format_template_lint_text(const std::string& template_id,
-                                      const std::vector<std::string>& warnings) {
+std::string format_template_lint_text(const std::string &template_id, const std::vector<std::string> &warnings) {
     std::ostringstream stream;
     stream << "Lint " << template_id << '\n';
     stream << "Warnings: " << warnings.size() << '\n';
-    for (const auto& warning : warnings) {
+    for (const auto &warning : warnings) {
         stream << "- " << warning << '\n';
     }
     return stream.str();
 }
 
-}
+} // namespace tempify

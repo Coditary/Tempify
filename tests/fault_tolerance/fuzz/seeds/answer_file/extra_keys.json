@@ -1,0 +1,8 @@
+{
+  "project_name": "Strict Demo",
+  "name_slug": "strict-demo",
+  "namespace": "strict_ns",
+  "include_ci": false,
+  "author": "Fuzz Tester",
+  "extra_unknown_key": "ignored by non-strict"
+}

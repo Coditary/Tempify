@@ -4,18 +4,20 @@
 #include <string>
 
 namespace {
+using tempify::test_support::create_basic_template_at;
+using tempify::test_support::create_shared_template;
+using tempify::test_support::read_text_file;
 using tempify::test_support::ScopedDirectoryCleanup;
 using tempify::test_support::ScopedStdoutCapture;
 using tempify::test_support::ScopedTempifyDataHome;
-using tempify::test_support::create_shared_template;
-using tempify::test_support::read_text_file;
 
-}
+} // namespace
 
 TEST_CASE(TempifyApp_refresh_indexes_shared_templates_and_renders_them) {
     ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-shared-store-render-data-home");
     ScopedDirectoryCleanup output_root(std::filesystem::temp_directory_path() / "tempify-shared-store-render-output");
-    create_shared_template(data_home.shared_root(), "shared_cpp", "Shared Template", "1.0.0", "From shared store", "Installed from shared store.");
+    create_shared_template(data_home.shared_root(), "shared_cpp", "Shared Template", "1.0.0", "From shared store",
+                           "Installed from shared store.");
 
     tempify::TempifyApp app;
 
@@ -49,32 +51,42 @@ TEST_CASE(TempifyApp_refresh_indexes_shared_templates_and_renders_them) {
 
     const std::filesystem::path generated = output_root.path() / "from-shared";
     REQUIRE_EQ(app.run({
-        "shared_cpp",
-        generated.string(),
-        "--set", "project_name=Shared App",
-        "--set", "project_slug=shared-app",
-    }), 0);
+                   "shared_cpp",
+                   generated.string(),
+                   "--set",
+                   "project_name=Shared App",
+                   "--set",
+                   "project_slug=shared-app",
+               }),
+               0);
     REQUIRE(read_text_file(generated / "README.md").find("Installed from shared store.") != std::string::npos);
 }
 
 TEST_CASE(TempifyApp_workspace_template_overrides_shared_template_with_same_id) {
     ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-shared-store-override-data-home");
     ScopedDirectoryCleanup output_root(std::filesystem::temp_directory_path() / "tempify-shared-store-override-output");
-    create_shared_template(data_home.shared_root(), "basic_cpp", "Shared Basic", "1.0.0", "From shared store", "FROM SHARED STORE");
+    create_shared_template(data_home.shared_root(), "basic_cpp", "Shared Basic", "1.0.0", "From shared store",
+                           "FROM SHARED STORE");
 
     tempify::TempifyApp app;
     REQUIRE_EQ(app.run({"refresh"}), 0);
 
     const std::filesystem::path generated = output_root.path() / "workspace-wins";
     REQUIRE_EQ(app.run({
-        "basic_cpp",
-        generated.string(),
-        "--set", "project_name=Workspace App",
-        "--set", "name_slug=workspace-app",
-        "--set", "namespace=workspace_ns",
-        "--set", "include_ci=false",
-        "--set", "author=Tester",
-    }), 0);
+                   "basic_cpp",
+                   generated.string(),
+                   "--set",
+                   "project_name=Workspace App",
+                   "--set",
+                   "name_slug=workspace-app",
+                   "--set",
+                   "namespace=workspace_ns",
+                   "--set",
+                   "include_ci=false",
+                   "--set",
+                   "author=Tester",
+               }),
+               0);
 
     const std::string readme = read_text_file(generated / "README.md");
     REQUIRE(readme.find("FROM SHARED STORE") == std::string::npos);
@@ -82,8 +94,10 @@ TEST_CASE(TempifyApp_workspace_template_overrides_shared_template_with_same_id) 
 }
 
 TEST_CASE(TempifyApp_list_info_and_catalog_prefer_workspace_template_over_shared_template) {
-    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-shared-store-catalog-override-data-home");
-    create_shared_template(data_home.shared_root(), "basic_cpp", "Shared Basic", "9.9.9", "Shared desc", "FROM SHARED STORE");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() /
+                                    "tempify-shared-store-catalog-override-data-home");
+    create_shared_template(data_home.shared_root(), "basic_cpp", "Shared Basic", "9.9.9", "Shared desc",
+                           "FROM SHARED STORE");
 
     tempify::TempifyApp app;
     REQUIRE_EQ(app.run({"refresh"}), 0);
@@ -107,7 +121,8 @@ TEST_CASE(TempifyApp_list_info_and_catalog_prefer_workspace_template_over_shared
 }
 
 TEST_CASE(TempifyApp_stale_shared_index_entry_missing_on_disk_is_not_listed_and_info_errors_cleanly) {
-    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-shared-store-stale-index-data-home");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() /
+                                    "tempify-shared-store-stale-index-data-home");
     create_shared_template(data_home.shared_root(), "ghost_tpl", "Ghost Template", "1.0.0", "Ghost desc");
 
     tempify::TempifyApp app;
@@ -121,4 +136,16 @@ TEST_CASE(TempifyApp_stale_shared_index_entry_missing_on_disk_is_not_listed_and_
     }
 
     REQUIRE_THROWS_AS(app.run({"info", "ghost_tpl"}), tempify::TempifyError);
+}
+
+TEST_CASE(TempifyApp_refresh_rejects_duplicate_shared_template_ids) {
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() /
+                                    "tempify-shared-store-duplicate-data-home");
+    static_cast<void>(create_basic_template_at(data_home.shared_root() / "templates" / "dup_tpl_alpha", "dup_tpl",
+                                               "Duplicate Alpha", "1.0.0", "Alpha copy"));
+    static_cast<void>(create_basic_template_at(data_home.shared_root() / "templates" / "dup_tpl_beta", "dup_tpl",
+                                               "Duplicate Beta", "1.0.0", "Beta copy"));
+
+    tempify::TempifyApp app;
+    REQUIRE_THROWS_AS(app.run({"refresh"}), tempify::TempifyError);
 }

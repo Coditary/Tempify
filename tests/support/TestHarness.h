@@ -9,34 +9,34 @@
 
 namespace prebyte::test {
 
-using TestFunction = void(*)();
+using TestFunction = void (*)();
 
 struct TestCase {
     std::string name;
     TestFunction function;
 };
 
-std::vector<TestCase>& registry();
-const TestCase* find_test(std::string_view name);
+std::vector<TestCase> &registry();
+const TestCase *find_test(std::string_view name);
 std::vector<std::string> test_names();
 
 struct TestRegistrar {
-    TestRegistrar(std::string name, TestFunction function);
+    TestRegistrar(const char *name, TestFunction function) noexcept;
 };
 
 class AssertionFailure : public std::runtime_error {
-public:
-    explicit AssertionFailure(const std::string& message);
+  public:
+    explicit AssertionFailure(const std::string &message);
 };
 
 class ScopedEnvironmentVariable {
-public:
-    ScopedEnvironmentVariable(std::string name, std::string value);
-    ScopedEnvironmentVariable(const ScopedEnvironmentVariable&) = delete;
-    ScopedEnvironmentVariable& operator=(const ScopedEnvironmentVariable&) = delete;
+  public:
+    ScopedEnvironmentVariable(std::string name, const std::string &value);
+    ScopedEnvironmentVariable(const ScopedEnvironmentVariable &) = delete;
+    ScopedEnvironmentVariable &operator=(const ScopedEnvironmentVariable &) = delete;
     ~ScopedEnvironmentVariable();
 
-private:
+  private:
     std::string name_;
     std::optional<std::string> previous_value_;
 };
@@ -44,18 +44,18 @@ private:
 int run_all_tests();
 int run_test_by_name(std::string_view name);
 
-template<typename Left, typename Right>
-void assert_equal(const Left& left, const Right& right, const char* left_expr, const char* right_expr,
-                  const char* file, int line) {
+template <typename Left, typename Right>
+void assert_equal(const Left &left, const Right &right, const char *left_expr, const char *right_expr, const char *file,
+                  int line) {
     if (!(left == right)) {
         std::ostringstream stream;
-        stream << file << ':' << line << " expected equality: " << left_expr << " == " << right_expr
-               << " (left='" << left << "', right='" << right << "')";
+        stream << file << ':' << line << " expected equality: " << left_expr << " == " << right_expr << " (left='"
+               << left << "', right='" << right << "')";
         throw AssertionFailure(stream.str());
     }
 }
 
-inline void assert_true(bool value, const char* expr, const char* file, int line) {
+inline void assert_true(bool value, const char *expr, const char *file, int line) {
     if (!value) {
         std::ostringstream stream;
         stream << file << ':' << line << " expected true: " << expr;
@@ -63,33 +63,43 @@ inline void assert_true(bool value, const char* expr, const char* file, int line
     }
 }
 
-template<typename Exception, typename Function>
-void assert_throws(Function&& function, const char* expr, const char* file, int line) {
+template <typename T>
+const T &require_value(const std::optional<T> &value, const char *expr, const char *file, int line) {
+    if (!value.has_value()) {
+        std::ostringstream stream;
+        stream << file << ':' << line << " expected optional value: " << expr;
+        throw AssertionFailure(stream.str());
+    }
+    return *value;
+}
+
+template <typename Exception, typename Function>
+void assert_throws(Function &&function, const char *expr, const char *file, int line) {
     try {
         function();
-    } catch (const Exception&) {
+    } catch (const Exception &) {
         return;
-    } catch (const std::exception& error) {
+    } catch (const std::exception &error) {
         std::ostringstream stream;
-        stream << file << ':' << line << " expected exception " << typeid(Exception).name()
-               << " from " << expr << ", got: " << error.what();
+        stream << file << ':' << line << " expected exception " << typeid(Exception).name() << " from " << expr
+               << ", got: " << error.what();
         throw AssertionFailure(stream.str());
     }
 
     std::ostringstream stream;
-    stream << file << ':' << line << " expected exception " << typeid(Exception).name()
-           << " from " << expr;
+    stream << file << ':' << line << " expected exception " << typeid(Exception).name() << " from " << expr;
     throw AssertionFailure(stream.str());
 }
 
-}
+} // namespace prebyte::test
 
-#define TEST_CASE(name) \
-    static void name(); \
-    static ::prebyte::test::TestRegistrar name##_registrar(#name, &name); \
+#define TEST_CASE(name)                                                                                                \
+    static void name();                                                                                                \
+    static ::prebyte::test::TestRegistrar name##_registrar(#name, &(name));                                            \
     static void name()
 
 #define REQUIRE(expr) ::prebyte::test::assert_true((expr), #expr, __FILE__, __LINE__)
+#define REQUIRE_VALUE(value) ::prebyte::test::require_value((value), #value, __FILE__, __LINE__)
 #define REQUIRE_EQ(left, right) ::prebyte::test::assert_equal((left), (right), #left, #right, __FILE__, __LINE__)
-#define REQUIRE_THROWS_AS(expr, exception_type) \
+#define REQUIRE_THROWS_AS(expr, exception_type)                                                                        \
     ::prebyte::test::assert_throws<exception_type>([&]() { (void)(expr); }, #expr, __FILE__, __LINE__)

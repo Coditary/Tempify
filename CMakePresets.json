@@ -1,0 +1,188 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 31,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "dev",
+      "displayName": "Dev Ninja",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+      }
+    },
+    {
+      "name": "coverage",
+      "displayName": "Coverage Ninja",
+      "inherits": "dev",
+      "binaryDir": "${sourceDir}/build-cmake/coverage",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "BUILD_TESTING": "ON",
+        "TEMPIFY_ENABLE_COVERAGE": "ON"
+      }
+    },
+    {
+      "name": "sanitize",
+      "displayName": "Sanitizer Ninja",
+      "inherits": "dev",
+      "binaryDir": "${sourceDir}/build-cmake/sanitize",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_CXX_SCAN_FOR_MODULES": "OFF",
+        "BUILD_TESTING": "ON",
+        "PREBYTE_ENABLE_SANITIZERS": "ON",
+        "PREBYTE_SANITIZERS": "address,undefined"
+      }
+    },
+    {
+      "name": "tsan",
+      "displayName": "ThreadSanitizer Ninja",
+      "inherits": "dev",
+      "binaryDir": "${sourceDir}/build-cmake/tsan",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_CXX_SCAN_FOR_MODULES": "OFF",
+        "BUILD_TESTING": "ON",
+        "PREBYTE_ENABLE_SANITIZERS": "ON",
+        "PREBYTE_SANITIZERS": "thread"
+      }
+    },
+    {
+      "name": "msan",
+      "displayName": "MemorySanitizer Ninja",
+      "inherits": "dev",
+      "binaryDir": "${sourceDir}/build-cmake/msan",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_SCAN_FOR_MODULES": "OFF",
+        "BUILD_TESTING": "ON",
+        "PREBYTE_ENABLE_SANITIZERS": "ON",
+        "PREBYTE_SANITIZERS": "memory"
+      }
+    },
+    {
+      "name": "fuzz",
+      "displayName": "Fuzzer Ninja",
+      "inherits": "dev",
+      "binaryDir": "${sourceDir}/build-cmake/fuzz",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_CXX_SCAN_FOR_MODULES": "OFF",
+        "BUILD_TESTING": "ON",
+        "TEMPIFY_BUILD_FUZZERS": "ON",
+        "PREBYTE_ENABLE_SANITIZERS": "ON",
+        "PREBYTE_SANITIZERS": "address,undefined"
+      }
+    },
+    {
+      "name": "tidy",
+      "displayName": "Clang-Tidy Ninja",
+      "inherits": "dev",
+      "binaryDir": "${sourceDir}/build-cmake/tidy",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_CXX_SCAN_FOR_MODULES": "OFF",
+        "BUILD_TESTING": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "dev",
+      "configurePreset": "dev"
+    },
+    {
+      "name": "coverage",
+      "configurePreset": "coverage"
+    },
+    {
+      "name": "coverage-tests",
+      "configurePreset": "coverage",
+      "targets": ["tempify_tests", "tempify"]
+    },
+    {
+      "name": "sanitize-tests",
+      "configurePreset": "sanitize",
+      "targets": ["tempify_tests", "tempify"]
+    },
+    {
+      "name": "tsan-tests",
+      "configurePreset": "tsan",
+      "targets": ["tempify_tests", "tempify"]
+    },
+    {
+      "name": "msan-tests",
+      "configurePreset": "msan",
+      "targets": ["tempify_tests", "tempify"]
+    },
+    {
+      "name": "fuzz",
+      "configurePreset": "fuzz",
+      "targets": [
+        "tempify",
+        "fuzz_slugify",
+        "fuzz_answer_json",
+        "fuzz_cli_parser",
+        "fuzz_tempify_config",
+        "fuzz_generation_lock",
+        "fuzz_answer_file"
+      ]
+    },
+    {
+      "name": "tidy-core",
+      "configurePreset": "tidy",
+      "targets": ["tempify_core", "tempify", "tempify_tests"]
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "coverage",
+      "configurePreset": "coverage",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "sanitize",
+      "configurePreset": "sanitize",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "tsan",
+      "configurePreset": "tsan",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "msan",
+      "configurePreset": "msan",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "fuzz",
+      "configurePreset": "fuzz",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}

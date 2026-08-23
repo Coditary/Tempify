@@ -1,0 +1,7 @@
+{
+  "defaults": {
+    "project_name": "Workspace Default",
+    "author": "Config Author",
+    "include_ci": "false"
+  }
+}

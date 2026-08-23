@@ -1,9 +1,8 @@
-#include "TestHarness.h"
 #include "TempifyTestSupport.h"
-
+#include "TestHarness.h"
 #include "tempify/lua/LuaEngine.h"
-#include "tempify/template/TemplateLoader.h"
 #include "tempify/support/Errors.h"
+#include "tempify/template/TemplateLoader.h"
 
 #include <filesystem>
 #include <fstream>
@@ -16,9 +15,8 @@
 namespace {
 
 class ScopedDirectoryCleanup {
-public:
-    explicit ScopedDirectoryCleanup(std::filesystem::path path)
-        : path_(std::move(path)) {
+  public:
+    explicit ScopedDirectoryCleanup(std::filesystem::path path) : path_(std::move(path)) {
         std::filesystem::remove_all(path_);
     }
 
@@ -26,28 +24,26 @@ public:
         std::filesystem::remove_all(path_);
     }
 
-    const std::filesystem::path& path() const noexcept {
+    const std::filesystem::path &path() const noexcept {
         return path_;
     }
 
-private:
+  private:
     std::filesystem::path path_;
 };
 
-void write_text_file(const std::filesystem::path& path, const std::string& text) {
+void write_text_file(const std::filesystem::path &path, const std::string &text) {
     std::filesystem::create_directories(path.parent_path());
     std::ofstream output(path, std::ios::binary);
     output << text;
 }
 
-void create_template(const std::filesystem::path& root,
-                     const std::string& id,
-                     const std::vector<std::string>& includes = {},
-                     const std::string& merge_body = {},
-                     const std::vector<std::pair<std::string, std::string>>& files = {},
+void create_template(const std::filesystem::path &root, const std::string &id,
+                     const std::vector<std::string> &includes = {}, const std::string &merge_body = {},
+                     const std::vector<std::pair<std::string, std::string>> &files = {},
                      const bool with_pre_hook = false) {
     std::filesystem::create_directories(root / "files");
-    for (const auto& [relative_path, content] : files) {
+    for (const auto &[relative_path, content] : files) {
         write_text_file(root / "files" / relative_path, content);
     }
     if (with_pre_hook) {
@@ -87,13 +83,14 @@ std::map<std::string, std::filesystem::path> test_index() {
     };
 }
 
-}
+} // namespace
 
 TEST_CASE(TemplateLoader_merge_layers_replace_drop_and_append) {
     tempify::LuaEngine lua_engine;
     tempify::TemplateLoader loader(lua_engine);
 
-    const tempify::TemplateManifest manifest = loader.load(tempify::test_support::test_template_path("layered_cpp_product"), test_index());
+    const tempify::TemplateManifest manifest =
+        loader.load(tempify::test_support::test_template_path("layered_cpp_product"), test_index());
 
     REQUIRE_EQ(manifest.info.id, std::string("layered_cpp_product"));
     REQUIRE(manifest.files.size() >= static_cast<std::size_t>(3));
@@ -102,7 +99,7 @@ TEST_CASE(TemplateLoader_merge_layers_replace_drop_and_append) {
     bool has_ci = false;
     bool has_base_only = false;
     bool main_from_product = false;
-    for (const auto& file : manifest.files) {
+    for (const auto &file : manifest.files) {
         if (file.relative_path == "README.md.pbt") {
             has_readme = true;
             REQUIRE_EQ(file.source_template_id, std::string("layered_ci_overlay"));
@@ -128,9 +125,8 @@ TEST_CASE(TemplateLoader_file_conflict_error_strategy_throws) {
     tempify::LuaEngine lua_engine;
     tempify::TemplateLoader loader(lua_engine);
 
-    REQUIRE_THROWS_AS(
-        loader.load(tempify::test_support::test_template_path("conflict_child_error"), test_index()),
-        tempify::TempifyError);
+    REQUIRE_THROWS_AS(loader.load(tempify::test_support::test_template_path("conflict_child_error"), test_index()),
+                      tempify::TempifyError);
 }
 
 TEST_CASE(TemplateLoader_detects_include_cycle_in_dynamic_templates) {
@@ -157,12 +153,8 @@ TEST_CASE(TemplateLoader_wildcard_file_conflict_keep_preserves_base_file) {
     const std::filesystem::path child = workspace.path() / "wild_child";
 
     create_template(base, "wild_base", {}, {}, {{"README.md.pbt", "base readme\n"}});
-    create_template(
-        child,
-        "wild_child",
-        {"wild_base"},
-        "    file_conflicts = { [\"*.pbt\"] = \"keep\" },\n",
-        {{"README.md.pbt", "child readme\n"}});
+    create_template(child, "wild_child", {"wild_base"}, "    file_conflicts = { [\"*.pbt\"] = \"keep\" },\n",
+                    {{"README.md.pbt", "child readme\n"}});
 
     tempify::LuaEngine lua_engine;
     tempify::TemplateLoader loader(lua_engine);
@@ -174,7 +166,7 @@ TEST_CASE(TemplateLoader_wildcard_file_conflict_keep_preserves_base_file) {
     const tempify::TemplateManifest manifest = loader.load(child, index);
 
     bool found = false;
-    for (const auto& file : manifest.files) {
+    for (const auto &file : manifest.files) {
         if (file.relative_path == "README.md.pbt") {
             found = true;
             REQUIRE_EQ(file.source_template_id, std::string("wild_base"));
@@ -191,11 +183,7 @@ TEST_CASE(TemplateLoader_pre_hook_conflict_error_for_included_templates_throws) 
 
     create_template(first, "hook_first", {}, {}, {}, true);
     create_template(second, "hook_second", {}, {}, {}, true);
-    create_template(
-        root,
-        "hook_root",
-        {"hook_first", "hook_second"},
-        "    pre_hook_conflict = \"error\",\n");
+    create_template(root, "hook_root", {"hook_first", "hook_second"}, "    pre_hook_conflict = \"error\",\n");
 
     tempify::LuaEngine lua_engine;
     tempify::TemplateLoader loader(lua_engine);

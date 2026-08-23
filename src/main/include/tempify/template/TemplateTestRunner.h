@@ -39,27 +39,28 @@ struct TemplateFixtureListing {
 };
 
 class TemplateTestRunner {
-public:
-    TemplateTestRunner(const LuaEngine& lua_engine, const PrebyteRenderer& renderer);
+  public:
+    TemplateTestRunner(const LuaEngine &lua_engine, const PrebyteRenderer &renderer);
 
-    TemplateTestReport run(const TemplateManifest& manifest,
-                           const std::optional<std::string>& fixture_name = std::nullopt) const;
-    TemplateTestReport update_snapshots(const TemplateManifest& manifest,
-                                        const std::optional<std::string>& fixture_name = std::nullopt) const;
-    std::vector<std::string> list_fixture_names(const TemplateManifest& manifest,
-                                                const std::optional<std::string>& fixture_name = std::nullopt) const;
-    std::vector<TemplateFixtureListing> list_fixtures(const TemplateManifest& manifest,
-                                                      const std::optional<std::string>& fixture_name = std::nullopt) const;
+    TemplateTestReport run(const TemplateManifest &manifest,
+                           const std::optional<std::string> &fixture_name = std::nullopt) const;
+    TemplateTestReport update_snapshots(const TemplateManifest &manifest,
+                                        const std::optional<std::string> &fixture_name = std::nullopt) const;
+    std::vector<std::string> list_fixture_names(const TemplateManifest &manifest,
+                                                const std::optional<std::string> &fixture_name = std::nullopt) const;
+    std::vector<TemplateFixtureListing>
+    list_fixtures(const TemplateManifest &manifest,
+                  const std::optional<std::string> &fixture_name = std::nullopt) const;
 
-private:
-    const LuaEngine& lua_engine_;
-    const PrebyteRenderer& renderer_;
+  private:
+    const LuaEngine &lua_engine_;
+    const PrebyteRenderer &renderer_;
 };
 
 std::string canonicalize_template_test_lockfile_json(std::string text);
-std::string format_template_test_report(const TemplateTestReport& report);
-std::string format_template_test_report_json(const TemplateTestReport& report);
-std::string format_template_fixture_listing_json(const std::string& template_id,
-                                                 const std::vector<TemplateFixtureListing>& fixtures);
+std::string format_template_test_report(const TemplateTestReport &report);
+std::string format_template_test_report_json(const TemplateTestReport &report);
+std::string format_template_fixture_listing_json(const std::string &template_id,
+                                                 const std::vector<TemplateFixtureListing> &fixtures);
 
-}
+} // namespace tempify

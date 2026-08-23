@@ -5,6 +5,7 @@ return {
     system = "tempify",
     flags = {
       "data-root=@tmp/store",
+      "repo=tempify-default|0|.reqpack-test/fixtures/catalogs/java_xyz/templates.json",
     },
     packages = {
       { name = "java-xyz" }

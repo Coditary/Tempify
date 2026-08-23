@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "templates": [
+    {
+      "id": "java-xyz",
+      "name": "Java XYZ",
+      "description": "Small Java starter template",
+      "version": "0.1.0",
+      "tags": ["java", "starter"],
+      "source": {
+        "type": "git",
+        "url": "../tempify-templates",
+        "subdir": "java-xyz"
+      }
+    }
+  ]
+}

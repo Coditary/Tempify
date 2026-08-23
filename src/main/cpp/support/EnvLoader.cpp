@@ -19,15 +19,16 @@ std::string trim(std::string value) {
 }
 
 std::string strip_quotes(std::string value) {
-    if (value.size() >= 2 && ((value.front() == '"' && value.back() == '"') || (value.front() == '\'' && value.back() == '\''))) {
+    if (value.size() >= 2 &&
+        ((value.front() == '"' && value.back() == '"') || (value.front() == '\'' && value.back() == '\''))) {
         return value.substr(1, value.size() - 2);
     }
     return value;
 }
 
-}
+} // namespace
 
-std::map<std::string, std::string> load_env_file(const std::filesystem::path& path) {
+std::map<std::string, std::string> load_env_file(const std::filesystem::path &path) {
     std::ifstream input(path);
     if (!input) {
         return {};
@@ -56,4 +57,4 @@ std::map<std::string, std::string> load_env_file(const std::filesystem::path& pa
     return values;
 }
 
-}
+} // namespace tempify

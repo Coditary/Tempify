@@ -5,8 +5,8 @@
 namespace tempify {
 
 class TemplateValidator {
-public:
-    void validate(const TemplateManifest& manifest) const;
+  public:
+    void validate(const TemplateManifest &manifest) const;
 };
 
-}
+} // namespace tempify

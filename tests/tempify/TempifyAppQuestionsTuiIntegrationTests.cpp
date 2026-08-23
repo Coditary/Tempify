@@ -5,14 +5,14 @@
 
 namespace {
 
+using tempify::test_support::create_sensitive_template;
+using tempify::test_support::read_text_file;
 using tempify::test_support::ScopedDirectoryCleanup;
 using tempify::test_support::ScopedStdinCapture;
 using tempify::test_support::ScopedStdoutCapture;
 using tempify::test_support::ScopedTempifyDataHome;
-using tempify::test_support::create_sensitive_template;
-using tempify::test_support::read_text_file;
 
-}
+} // namespace
 
 TEST_CASE(TempifyApp_render_help_mentions_diff_mode) {
     ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-diff-help-data-home");
@@ -44,18 +44,17 @@ TEST_CASE(TempifyApp_tui_review_screen_allows_back_before_generate) {
     ScopedDirectoryCleanup target(std::filesystem::temp_directory_path() / "tempify-app-tui-review-target");
     ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-tui-review-data-home");
     tempify::TempifyApp app;
-    ScopedStdinCapture input(
-        "First App\n"
-        "\n"
-        "core\n"
-        "no\n"
-        "n\n"
-        ":back\n"
-        "Second App\n"
-        "\n"
-        "core2\n"
-        "no\n"
-        "yes\n");
+    ScopedStdinCapture input("First App\n"
+                             "\n"
+                             "core\n"
+                             "no\n"
+                             "n\n"
+                             ":back\n"
+                             "Second App\n"
+                             "\n"
+                             "core2\n"
+                             "no\n"
+                             "yes\n");
     ScopedStdoutCapture capture;
 
     REQUIRE_EQ(app.run({"basic_cpp", target.path().string(), "--set", "author=Review Tester", "--tui"}), 0);
@@ -158,7 +157,5 @@ TEST_CASE(TempifyApp_questions_unknown_template_throws) {
     ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-q-missing-data-home");
     tempify::TempifyApp app;
 
-    REQUIRE_THROWS_AS(
-        app.run({"definitely_missing_template_12345", "-q"}),
-        tempify::TempifyError);
+    REQUIRE_THROWS_AS(app.run({"definitely_missing_template_12345", "-q"}), tempify::TempifyError);
 }

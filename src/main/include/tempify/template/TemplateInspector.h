@@ -6,6 +6,6 @@
 
 namespace tempify {
 
-std::string inspect_template_text(const TemplateManifest& manifest);
+std::string inspect_template_text(const TemplateManifest &manifest);
 
 }

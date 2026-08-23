@@ -37,4 +37,4 @@ std::string slugify(std::string_view value) {
     return result;
 }
 
-}
+} // namespace tempify

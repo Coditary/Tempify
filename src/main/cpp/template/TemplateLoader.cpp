@@ -11,7 +11,7 @@ namespace tempify {
 
 namespace {
 
-std::string format_stack(const std::vector<std::filesystem::path>& stack) {
+std::string format_stack(const std::vector<std::filesystem::path> &stack) {
     std::ostringstream stream;
     for (std::size_t index = 0; index < stack.size(); ++index) {
         if (index > 0) {
@@ -22,24 +22,23 @@ std::string format_stack(const std::vector<std::filesystem::path>& stack) {
     return stream.str();
 }
 
-}
+} // namespace
 
-TemplateLoader::TemplateLoader(const LuaEngine& lua_engine)
-    : lua_engine_(lua_engine) {}
+TemplateLoader::TemplateLoader(const LuaEngine &lua_engine) : lua_engine_(lua_engine) {}
 
-TemplateInfo TemplateLoader::summarize(const std::filesystem::path& template_root) const {
+TemplateInfo TemplateLoader::summarize(const std::filesystem::path &template_root) const {
     return lua_engine_.load_template_info(template_root);
 }
 
-TemplateManifest TemplateLoader::load(const std::filesystem::path& template_root,
-                                      const std::map<std::string, std::filesystem::path>& template_index) const {
+TemplateManifest TemplateLoader::load(const std::filesystem::path &template_root,
+                                      const std::map<std::string, std::filesystem::path> &template_index) const {
     std::vector<std::filesystem::path> stack;
     return load_recursive(template_root, template_index, stack);
 }
 
-TemplateManifest TemplateLoader::load_recursive(const std::filesystem::path& template_root,
-                                                const std::map<std::string, std::filesystem::path>& template_index,
-                                                std::vector<std::filesystem::path>& stack) const {
+TemplateManifest TemplateLoader::load_recursive(const std::filesystem::path &template_root,
+                                                const std::map<std::string, std::filesystem::path> &template_index,
+                                                std::vector<std::filesystem::path> &stack) const {
     if (std::find(stack.begin(), stack.end(), template_root) != stack.end()) {
         std::vector<std::filesystem::path> cycle = stack;
         cycle.push_back(template_root);
@@ -50,7 +49,7 @@ TemplateManifest TemplateLoader::load_recursive(const std::filesystem::path& tem
     TemplateManifest current = lua_engine_.load_partial_manifest(template_root);
     TemplateManifest merged;
 
-    for (const auto& include_id : current.include_ids) {
+    for (const auto &include_id : current.include_ids) {
         const auto it = template_index.find(include_id);
         if (it == template_index.end()) {
             throw TempifyError("Unknown included template id '" + include_id + "' while loading " + current.info.id);
@@ -63,4 +62,4 @@ TemplateManifest TemplateLoader::load_recursive(const std::filesystem::path& tem
     return merged;
 }
 
-}
+} // namespace tempify

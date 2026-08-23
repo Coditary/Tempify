@@ -1,18 +1,16 @@
-#include "tempify/lua/LuaEngine.h"
-
 #include "LuaEngineInternal.h"
+#include "tempify/lua/LuaEngine.h"
 
 namespace tempify {
 
 namespace {
 
-void push_question_definition(lua_State* state,
-                              const QuestionDefinition& question,
-                              const char* missing_message) {
+void push_question_definition(lua_State *state, const QuestionDefinition &question, const char *missing_message) {
     lua_internal::register_metadata_helpers(state);
     lua_internal::load_file_result(state, question.source_path);
     if (lua_istable(state, -1) == 0) {
-        lua_internal::throw_lua_error(question.source_path, "questions.lua must return a table with 'order' and 'groups'");
+        lua_internal::throw_lua_error(question.source_path,
+                                      "questions.lua must return a table with 'order' and 'groups'");
     }
 
     lua_getfield(state, -1, "groups");
@@ -31,10 +29,10 @@ void push_question_definition(lua_State* state,
     }
 }
 
-}
+} // namespace
 
-std::optional<std::string> LuaEngine::evaluate_default(const QuestionDefinition& question,
-                                                       const std::map<std::string, std::string>& values) const {
+std::optional<std::string> LuaEngine::evaluate_default(const QuestionDefinition &question,
+                                                       const std::map<std::string, std::string> &values) const {
     if (!question.default_is_function) {
         return question.default_value;
     }
@@ -60,8 +58,8 @@ std::optional<std::string> LuaEngine::evaluate_default(const QuestionDefinition&
     return lua_internal::value_to_string(state.get(), -1, question.source_path);
 }
 
-bool LuaEngine::evaluate_condition(const QuestionDefinition& question,
-                                   const std::map<std::string, std::string>& values) const {
+bool LuaEngine::evaluate_condition(const QuestionDefinition &question,
+                                   const std::map<std::string, std::string> &values) const {
     if (!question.condition_is_function) {
         if (!question.condition_value.has_value()) {
             return true;
@@ -89,9 +87,8 @@ bool LuaEngine::evaluate_condition(const QuestionDefinition& question,
     return lua_internal::string_truthy(lua_internal::value_to_string(state.get(), -1, question.source_path));
 }
 
-std::optional<std::string> LuaEngine::validate_answer(const QuestionDefinition& question,
-                                                      const std::string& candidate,
-                                                      const std::map<std::string, std::string>& values) const {
+std::optional<std::string> LuaEngine::validate_answer(const QuestionDefinition &question, const std::string &candidate,
+                                                      const std::map<std::string, std::string> &values) const {
     if (!question.validate_is_function) {
         return std::nullopt;
     }
@@ -127,4 +124,4 @@ std::optional<std::string> LuaEngine::validate_answer(const QuestionDefinition& 
     return message;
 }
 
-}
+} // namespace tempify

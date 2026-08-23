@@ -1,0 +1,5 @@
+{
+  "project_name": "Bool Demo",
+  "include_ci": true,
+  "hook_timeout_ms": 0
+}

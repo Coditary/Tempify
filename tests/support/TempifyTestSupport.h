@@ -1,35 +1,45 @@
 #pragma once
 
 #include "TestHarness.h"
+#include "tempify/build/GenerationLock.h"
 
+#include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <optional>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
 
+#if defined(_WIN32)
+#include <io.h>
+#else
+#include <fcntl.h>
+#include <unistd.h>
+#endif
+
 namespace tempify::test_support {
 
-inline const std::filesystem::path& project_root() {
+inline const std::filesystem::path &project_root() {
     static const std::filesystem::path value = std::filesystem::path(TEMPIFY_SOURCE_DIR);
     return value;
 }
 
-inline const std::filesystem::path& tests_root() {
+inline const std::filesystem::path &tests_root() {
     static const std::filesystem::path value = project_root() / "tests";
     return value;
 }
 
-inline const std::filesystem::path& test_workspace_root() {
+inline const std::filesystem::path &test_workspace_root() {
     static const std::filesystem::path value = tests_root() / "test_workspace";
     return value;
 }
 
-inline const std::filesystem::path& test_templates_root() {
+inline const std::filesystem::path &test_templates_root() {
     static const std::filesystem::path value = tests_root() / "test_templates";
     return value;
 }
@@ -47,34 +57,32 @@ inline std::filesystem::path test_template_path(const std::string_view template_
 }
 
 class ScopedDirectoryCleanup {
-public:
-    explicit ScopedDirectoryCleanup(std::filesystem::path path)
-        : path_(std::move(path)) {
+  public:
+    explicit ScopedDirectoryCleanup(std::filesystem::path path) : path_(std::move(path)) {
         std::filesystem::remove_all(path_);
     }
 
-    ScopedDirectoryCleanup(const ScopedDirectoryCleanup&) = delete;
-    ScopedDirectoryCleanup& operator=(const ScopedDirectoryCleanup&) = delete;
+    ScopedDirectoryCleanup(const ScopedDirectoryCleanup &) = delete;
+    ScopedDirectoryCleanup &operator=(const ScopedDirectoryCleanup &) = delete;
 
     ~ScopedDirectoryCleanup() {
         std::filesystem::remove_all(path_);
     }
 
-    const std::filesystem::path& path() const noexcept {
+    const std::filesystem::path &path() const noexcept {
         return path_;
     }
 
-private:
+  private:
     std::filesystem::path path_;
 };
 
 class ScopedStdoutCapture {
-public:
-    ScopedStdoutCapture()
-        : previous_(std::cout.rdbuf(buffer_.rdbuf())) {}
+  public:
+    ScopedStdoutCapture() : previous_(std::cout.rdbuf(buffer_.rdbuf())) {}
 
-    ScopedStdoutCapture(const ScopedStdoutCapture&) = delete;
-    ScopedStdoutCapture& operator=(const ScopedStdoutCapture&) = delete;
+    ScopedStdoutCapture(const ScopedStdoutCapture &) = delete;
+    ScopedStdoutCapture &operator=(const ScopedStdoutCapture &) = delete;
 
     ~ScopedStdoutCapture() {
         std::cout.rdbuf(previous_);
@@ -84,61 +92,121 @@ public:
         return buffer_.str();
     }
 
-private:
+  private:
     std::ostringstream buffer_;
-    std::streambuf* previous_ = nullptr;
+    std::streambuf *previous_ = nullptr;
 };
 
 class ScopedStdinCapture {
-public:
+  public:
     explicit ScopedStdinCapture(std::string text)
-        : buffer_(std::move(text)),
-          previous_(std::cin.rdbuf(buffer_.rdbuf())) {}
+        : buffer_(std::move(text)), previous_(std::cin.rdbuf(buffer_.rdbuf())) {}
 
-    ScopedStdinCapture(const ScopedStdinCapture&) = delete;
-    ScopedStdinCapture& operator=(const ScopedStdinCapture&) = delete;
+    ScopedStdinCapture(const ScopedStdinCapture &) = delete;
+    ScopedStdinCapture &operator=(const ScopedStdinCapture &) = delete;
 
     ~ScopedStdinCapture() {
         std::cin.rdbuf(previous_);
     }
 
-private:
+  private:
     std::istringstream buffer_;
-    std::streambuf* previous_ = nullptr;
+    std::streambuf *previous_ = nullptr;
+};
+
+// Redirects the real stdin file descriptor so isatty(STDIN_FILENO) is false.
+// ScopedStdinCapture only replaces std::cin and does not affect hook TTY checks.
+class ScopedNonTtyStdin {
+  public:
+    ScopedNonTtyStdin() {
+#if defined(_WIN32)
+        saved_fd_ = _dup(_fileno(stdin));
+        FILE *null_stream = std::fopen("NUL", "r");
+        if (null_stream == nullptr || saved_fd_ == -1) {
+            throw std::runtime_error("failed to prepare non-tty stdin");
+        }
+        const int null_fd = _fileno(null_stream);
+        if (_dup2(null_fd, _fileno(stdin)) != 0) {
+            std::fclose(null_stream);
+            _close(saved_fd_);
+            saved_fd_ = -1;
+            throw std::runtime_error("failed to redirect stdin");
+        }
+        std::fclose(null_stream);
+#else
+        saved_fd_ = ::dup(STDIN_FILENO);
+        const int null_fd = ::open("/dev/null", O_RDONLY);
+        if (saved_fd_ == -1 || null_fd == -1) {
+            if (null_fd != -1) {
+                ::close(null_fd);
+            }
+            if (saved_fd_ != -1) {
+                ::close(saved_fd_);
+                saved_fd_ = -1;
+            }
+            throw std::runtime_error("failed to prepare non-tty stdin");
+        }
+        if (::dup2(null_fd, STDIN_FILENO) != 0) {
+            ::close(null_fd);
+            ::close(saved_fd_);
+            saved_fd_ = -1;
+            throw std::runtime_error("failed to redirect stdin");
+        }
+        ::close(null_fd);
+#endif
+    }
+
+    ScopedNonTtyStdin(const ScopedNonTtyStdin &) = delete;
+    ScopedNonTtyStdin &operator=(const ScopedNonTtyStdin &) = delete;
+
+    ~ScopedNonTtyStdin() {
+        if (saved_fd_ == -1) {
+            return;
+        }
+#if defined(_WIN32)
+        _dup2(saved_fd_, _fileno(stdin));
+        _close(saved_fd_);
+#else
+        ::dup2(saved_fd_, STDIN_FILENO);
+        ::close(saved_fd_);
+#endif
+        saved_fd_ = -1;
+    }
+
+  private:
+    int saved_fd_ = -1;
 };
 
 class ScopedCurrentPath {
-public:
-    explicit ScopedCurrentPath(const std::filesystem::path& path)
-        : previous_(std::filesystem::current_path()) {
+  public:
+    explicit ScopedCurrentPath(const std::filesystem::path &path) : previous_(std::filesystem::current_path()) {
         std::filesystem::current_path(path);
     }
 
-    ScopedCurrentPath(const ScopedCurrentPath&) = delete;
-    ScopedCurrentPath& operator=(const ScopedCurrentPath&) = delete;
+    ScopedCurrentPath(const ScopedCurrentPath &) = delete;
+    ScopedCurrentPath &operator=(const ScopedCurrentPath &) = delete;
 
     ~ScopedCurrentPath() {
         std::filesystem::current_path(previous_);
     }
 
-private:
+  private:
     std::filesystem::path previous_;
 };
 
 class ScopedTestWorkspace final : public ScopedCurrentPath {
-public:
-    ScopedTestWorkspace()
-        : ScopedCurrentPath((ensure_test_workspace_layout(), test_workspace_root())) {}
+  public:
+    ScopedTestWorkspace() : ScopedCurrentPath((ensure_test_workspace_layout(), test_workspace_root())) {}
 };
 
-inline std::string read_text_file(const std::filesystem::path& path) {
+inline std::string read_text_file(const std::filesystem::path &path) {
     std::ifstream input(path, std::ios::binary);
     std::ostringstream stream;
     stream << input.rdbuf();
     return stream.str();
 }
 
-inline void write_text_file(const std::filesystem::path& path, const std::string& text) {
+inline void write_text_file(const std::filesystem::path &path, const std::string &text) {
     if (path.has_parent_path()) {
         std::filesystem::create_directories(path.parent_path());
     }
@@ -151,23 +219,35 @@ inline std::string json_escape(std::string_view value) {
     escaped.reserve(value.size());
     for (const char ch : value) {
         switch (ch) {
-        case '\\': escaped += "\\\\"; break;
-        case '"': escaped += "\\\""; break;
-        case '\n': escaped += "\\n"; break;
-        case '\r': escaped += "\\r"; break;
-        case '\t': escaped += "\\t"; break;
-        default: escaped.push_back(ch); break;
+        case '\\':
+            escaped += "\\\\";
+            break;
+        case '"':
+            escaped += "\\\"";
+            break;
+        case '\n':
+            escaped += "\\n";
+            break;
+        case '\r':
+            escaped += "\\r";
+            break;
+        case '\t':
+            escaped += "\\t";
+            break;
+        default:
+            escaped.push_back(ch);
+            break;
         }
     }
     return escaped;
 }
 
-inline std::string json_escaped_path(const std::filesystem::path& path) {
+inline std::string json_escaped_path(const std::filesystem::path &path) {
     return json_escape(path.string());
 }
 
 inline std::filesystem::path tempify_binary_path() {
-    if (const char* binary = std::getenv("TEMPIFY_TEST_BINARY"); binary != nullptr && binary[0] != '\0') {
+    if (const char *binary = std::getenv("TEMPIFY_TEST_BINARY"); binary != nullptr && binary[0] != '\0') {
         return binary;
     }
 
@@ -179,15 +259,14 @@ inline std::filesystem::path tempify_binary_path() {
 }
 
 class ScopedTempifyDataHome {
-public:
+  public:
     explicit ScopedTempifyDataHome(std::filesystem::path path)
-        : cleanup_(std::move(path)),
-          env_("XDG_DATA_HOME", cleanup_.path().string()) {}
+        : cleanup_(std::move(path)), env_("XDG_DATA_HOME", cleanup_.path().string()) {}
 
-    ScopedTempifyDataHome(const ScopedTempifyDataHome&) = delete;
-    ScopedTempifyDataHome& operator=(const ScopedTempifyDataHome&) = delete;
+    ScopedTempifyDataHome(const ScopedTempifyDataHome &) = delete;
+    ScopedTempifyDataHome &operator=(const ScopedTempifyDataHome &) = delete;
 
-    const std::filesystem::path& path() const noexcept {
+    const std::filesystem::path &path() const noexcept {
         return cleanup_.path();
     }
 
@@ -195,30 +274,29 @@ public:
         return cleanup_.path() / "tempify";
     }
 
-private:
+  private:
     ScopedDirectoryCleanup cleanup_;
     prebyte::test::ScopedEnvironmentVariable env_;
 };
 
 class ScopedTempifyConfigHome {
-public:
+  public:
     explicit ScopedTempifyConfigHome(std::filesystem::path path)
-        : cleanup_(std::move(path)),
-          env_("XDG_CONFIG_HOME", cleanup_.path().string()) {}
+        : cleanup_(std::move(path)), env_("XDG_CONFIG_HOME", cleanup_.path().string()) {}
 
-    ScopedTempifyConfigHome(const ScopedTempifyConfigHome&) = delete;
-    ScopedTempifyConfigHome& operator=(const ScopedTempifyConfigHome&) = delete;
+    ScopedTempifyConfigHome(const ScopedTempifyConfigHome &) = delete;
+    ScopedTempifyConfigHome &operator=(const ScopedTempifyConfigHome &) = delete;
 
-    const std::filesystem::path& path() const noexcept {
+    const std::filesystem::path &path() const noexcept {
         return cleanup_.path();
     }
 
-private:
+  private:
     ScopedDirectoryCleanup cleanup_;
     prebyte::test::ScopedEnvironmentVariable env_;
 };
 
-inline void link_test_templates_into_workspace(const std::filesystem::path& workspace_root) {
+inline void link_test_templates_into_workspace(const std::filesystem::path &workspace_root) {
     std::filesystem::create_directories(workspace_root);
     std::error_code error;
     std::filesystem::remove(workspace_root / "templates", error);
@@ -226,18 +304,20 @@ inline void link_test_templates_into_workspace(const std::filesystem::path& work
     std::filesystem::create_directory_symlink(test_templates_root(), workspace_root / "templates");
 }
 
-inline std::filesystem::path create_required_only_template_with_version(const std::filesystem::path& root,
-                                                                        const std::string& version) {
+inline std::filesystem::path create_required_only_template_with_version(const std::filesystem::path &root,
+                                                                        const std::string &version) {
     const std::filesystem::path template_root = root / "required_only";
     std::filesystem::create_directories(template_root / "files");
     write_text_file(template_root / "template.lua",
                     "return {\n"
                     "  id = \"required_only\",\n"
                     "  name = \"Required Only\",\n"
-                    "  version = \"" + version + "\",\n"
-                    "  source_dir = \"files\",\n"
-                    "  output = { path = \"{{ required_name }}\", overwrite = false },\n"
-                    "}\n");
+                    "  version = \"" +
+                        version +
+                        "\",\n"
+                        "  source_dir = \"files\",\n"
+                        "  output = { path = \"{{ required_name }}\", overwrite = false },\n"
+                        "}\n");
     write_text_file(template_root / "questions.lua",
                     "return {\n"
                     "  order = { \"General\" },\n"
@@ -251,21 +331,20 @@ inline std::filesystem::path create_required_only_template_with_version(const st
     return template_root;
 }
 
-inline std::filesystem::path create_required_only_template(const std::filesystem::path& root) {
+inline std::filesystem::path create_required_only_template(const std::filesystem::path &root) {
     return create_required_only_template_with_version(root, "1.0.0");
 }
 
-inline std::filesystem::path create_duplicate_alias_template(const std::filesystem::path& root) {
+inline std::filesystem::path create_duplicate_alias_template(const std::filesystem::path &root) {
     const std::filesystem::path template_root = root / "duplicate_alias";
     std::filesystem::create_directories(template_root / "files");
-    write_text_file(template_root / "template.lua",
-                    "return {\n"
-                    "  id = \"duplicate_alias\",\n"
-                    "  name = \"Duplicate Alias\",\n"
-                    "  version = \"1.0.0\",\n"
-                    "  source_dir = \"files\",\n"
-                    "  output = { path = \"out\", overwrite = false },\n"
-                    "}\n");
+    write_text_file(template_root / "template.lua", "return {\n"
+                                                    "  id = \"duplicate_alias\",\n"
+                                                    "  name = \"Duplicate Alias\",\n"
+                                                    "  version = \"1.0.0\",\n"
+                                                    "  source_dir = \"files\",\n"
+                                                    "  output = { path = \"out\", overwrite = false },\n"
+                                                    "}\n");
     write_text_file(template_root / "questions.lua",
                     "return {\n"
                     "  order = { \"General\" },\n"
@@ -280,36 +359,33 @@ inline std::filesystem::path create_duplicate_alias_template(const std::filesyst
     return template_root;
 }
 
-inline std::filesystem::path create_bad_layout_template(const std::filesystem::path& root) {
+inline std::filesystem::path create_bad_layout_template(const std::filesystem::path &root) {
     const std::filesystem::path template_root = root / "bad_layout";
     std::filesystem::create_directories(template_root / "files");
-    write_text_file(template_root / "template.lua",
-                    "return {\n"
-                    "  id = \"bad_layout\",\n"
-                    "  name = \"Bad Layout\",\n"
-                    "  version = \"1.0.0\",\n"
-                    "  source_dir = \"files\",\n"
-                    "  output = { path = \"out\", overwrite = false },\n"
-                    "}\n");
-    write_text_file(template_root / "layout.lua",
-                    "return {\n"
-                    "  { source = \"missing.txt\", target = \"renamed.txt\" },\n"
-                    "}\n");
+    write_text_file(template_root / "template.lua", "return {\n"
+                                                    "  id = \"bad_layout\",\n"
+                                                    "  name = \"Bad Layout\",\n"
+                                                    "  version = \"1.0.0\",\n"
+                                                    "  source_dir = \"files\",\n"
+                                                    "  output = { path = \"out\", overwrite = false },\n"
+                                                    "}\n");
+    write_text_file(template_root / "layout.lua", "return {\n"
+                                                  "  { source = \"missing.txt\", target = \"renamed.txt\" },\n"
+                                                  "}\n");
     write_text_file(template_root / "files" / "README.md.pbt", "# hi\n");
     return template_root;
 }
 
-inline std::filesystem::path create_sensitive_template(const std::filesystem::path& root) {
+inline std::filesystem::path create_sensitive_template(const std::filesystem::path &root) {
     const std::filesystem::path template_root = root / "sensitive_demo";
     std::filesystem::create_directories(template_root / "files");
-    write_text_file(template_root / "template.lua",
-                    "return {\n"
-                    "  id = \"sensitive_demo\",\n"
-                    "  name = \"Sensitive Demo\",\n"
-                    "  version = \"1.0.0\",\n"
-                    "  source_dir = \"files\",\n"
-                    "  output = { path = \"{{ project_name }}\", overwrite = false },\n"
-                    "}\n");
+    write_text_file(template_root / "template.lua", "return {\n"
+                                                    "  id = \"sensitive_demo\",\n"
+                                                    "  name = \"Sensitive Demo\",\n"
+                                                    "  version = \"1.0.0\",\n"
+                                                    "  source_dir = \"files\",\n"
+                                                    "  output = { path = \"{{ project_name }}\", overwrite = false },\n"
+                                                    "}\n");
     write_text_file(template_root / "questions.lua",
                     "return {\n"
                     "  order = { \"Secrets\" },\n"
@@ -324,17 +400,16 @@ inline std::filesystem::path create_sensitive_template(const std::filesystem::pa
     return template_root;
 }
 
-inline std::filesystem::path create_slow_hook_template(const std::filesystem::path& root) {
+inline std::filesystem::path create_slow_hook_template(const std::filesystem::path &root) {
     const std::filesystem::path template_root = root / "slow_hook_demo";
     std::filesystem::create_directories(template_root / "files");
-    write_text_file(template_root / "template.lua",
-                    "return {\n"
-                    "  id = \"slow_hook_demo\",\n"
-                    "  name = \"Slow Hook Demo\",\n"
-                    "  version = \"1.0.0\",\n"
-                    "  source_dir = \"files\",\n"
-                    "  output = { path = \"{{ project_name }}\", overwrite = false },\n"
-                    "}\n");
+    write_text_file(template_root / "template.lua", "return {\n"
+                                                    "  id = \"slow_hook_demo\",\n"
+                                                    "  name = \"Slow Hook Demo\",\n"
+                                                    "  version = \"1.0.0\",\n"
+                                                    "  source_dir = \"files\",\n"
+                                                    "  output = { path = \"{{ project_name }}\", overwrite = false },\n"
+                                                    "}\n");
     write_text_file(template_root / "questions.lua",
                     "return {\n"
                     "  order = { \"General\" },\n"
@@ -349,53 +424,94 @@ inline std::filesystem::path create_slow_hook_template(const std::filesystem::pa
     return template_root;
 }
 
-inline std::filesystem::path create_basic_template_at(const std::filesystem::path& template_root,
-                                                      const std::string& template_id,
-                                                      const std::string& template_name,
-                                                      const std::string& version,
-                                                      const std::string& description,
-                                                      const std::string& readme_message = "Installed from shared store.") {
+inline std::filesystem::path
+create_basic_template_at(const std::filesystem::path &template_root, const std::string &template_id,
+                         const std::string &template_name, const std::string &version, const std::string &description,
+                         const std::string &readme_message = "Installed from shared store.") {
     std::filesystem::create_directories(template_root / "files");
     write_text_file(template_root / "template.lua",
                     "return {\n"
-                    "  id = \"" + template_id + "\",\n"
-                    "  name = \"" + template_name + "\",\n"
-                    "  version = \"" + version + "\",\n"
-                    "  description = \"" + description + "\",\n"
-                    "  source_dir = \"files\",\n"
-                    "  output = { path = \"{{ project_slug }}\", overwrite = false },\n"
-                    "}\n");
-    write_text_file(template_root / "questions.lua",
-                    "return {\n"
-                    "  order = { \"Project\" },\n"
-                    "  groups = {\n"
-                    "    Project = {\n"
-                    "      { key = \"project_name\", type = \"string\", prompt = \"Project name\", default = \"Shared App\" },\n"
-                    "      { key = \"project_slug\", type = \"string\", default = function(ctx) return slugify(ctx.values.project_name or \"shared-app\") end },\n"
-                    "    },\n"
-                    "  },\n"
-                    "}\n");
+                    "  id = \"" +
+                        template_id +
+                        "\",\n"
+                        "  name = \"" +
+                        template_name +
+                        "\",\n"
+                        "  version = \"" +
+                        version +
+                        "\",\n"
+                        "  description = \"" +
+                        description +
+                        "\",\n"
+                        "  source_dir = \"files\",\n"
+                        "  output = { path = \"{{ project_slug }}\", overwrite = false },\n"
+                        "}\n");
+    write_text_file(
+        template_root / "questions.lua",
+        "return {\n"
+        "  order = { \"Project\" },\n"
+        "  groups = {\n"
+        "    Project = {\n"
+        "      { key = \"project_name\", type = \"string\", prompt = \"Project name\", default = \"Shared App\" },\n"
+        "      { key = \"project_slug\", type = \"string\", default = function(ctx) return "
+        "slugify(ctx.values.project_name or \"shared-app\") end },\n"
+        "    },\n"
+        "  },\n"
+        "}\n");
     write_text_file(template_root / "files" / "README.md.pbt", "# {{ project_name }}\n\n" + readme_message + "\n");
     return template_root;
 }
 
-inline void create_shared_template(const std::filesystem::path& shared_root,
-                                   const std::string& template_id,
-                                   const std::string& template_name,
-                                   const std::string& version,
-                                   const std::string& description,
-                                   const std::string& readme_message = "Installed from shared store.") {
-    static_cast<void>(create_basic_template_at(shared_root / "templates" / template_id,
-                                               template_id,
-                                               template_name,
-                                               version,
-                                               description,
-                                               readme_message));
+inline void create_shared_template(const std::filesystem::path &shared_root, const std::string &template_id,
+                                   const std::string &template_name, const std::string &version,
+                                   const std::string &description,
+                                   const std::string &readme_message = "Installed from shared store.") {
+    static_cast<void>(create_basic_template_at(shared_root / "templates" / template_id, template_id, template_name,
+                                               version, description, readme_message));
 }
 
-inline void write_available_template_cache(const std::filesystem::path& shared_root,
-                                           const std::string& payload) {
+inline void write_available_template_cache(const std::filesystem::path &shared_root, const std::string &payload) {
     write_text_file(shared_root / "index" / "reqpack-available.json", payload);
 }
 
+inline void inject_stale_managed_file(const std::filesystem::path &target, const std::string &relative_path,
+                                      const std::string &content) {
+    write_text_file(target / relative_path, content);
+    const std::string hash = tempify::content_fingerprint_hex(content);
+    const std::filesystem::path lock_path = target / ".tempify-lock.json";
+    std::string lock_text = read_text_file(lock_path);
+
+    const std::string files_close = "  ],\n  \"managed_file_hashes\"";
+    const std::size_t files_close_pos = lock_text.find(files_close);
+    if (files_close_pos == std::string::npos) {
+        throw std::runtime_error("managed_files section not found in lock file");
+    }
+    lock_text.insert(files_close_pos, ",\n    \"" + json_escape(relative_path) + "\"");
+
+    const std::string hashes_close = "  },\n  \"values\"";
+    const std::size_t hashes_close_pos = lock_text.find(hashes_close);
+    if (hashes_close_pos == std::string::npos) {
+        throw std::runtime_error("managed_file_hashes section not found in lock file");
+    }
+    lock_text.insert(hashes_close_pos, ",\n    \"" + json_escape(relative_path) + "\": \"" + hash + "\"");
+
+    write_text_file(lock_path, lock_text);
 }
+
+inline void inject_stale_managed_file_without_hash(const std::filesystem::path &target,
+                                                   const std::string &relative_path, const std::string &content) {
+    write_text_file(target / relative_path, content);
+    const std::filesystem::path lock_path = target / ".tempify-lock.json";
+    std::string lock_text = read_text_file(lock_path);
+
+    const std::string files_close = "  ],\n  \"managed_file_hashes\"";
+    const std::size_t files_close_pos = lock_text.find(files_close);
+    if (files_close_pos == std::string::npos) {
+        throw std::runtime_error("managed_files section not found in lock file");
+    }
+    lock_text.insert(files_close_pos, ",\n    \"" + json_escape(relative_path) + "\"");
+
+    write_text_file(lock_path, lock_text);
+}
+
+} // namespace tempify::test_support

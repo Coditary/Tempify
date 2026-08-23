@@ -1,7 +1,6 @@
 #include "tempify/build/BuildPlanReport.h"
 
 #include "tempify/build/GenerationLock.h"
-
 #include "tempify/support/Version.h"
 
 #include <chrono>
@@ -15,17 +14,29 @@ namespace tempify {
 
 namespace {
 
-std::string json_escape(const std::string& value) {
+std::string json_escape(const std::string &value) {
     std::string escaped;
     escaped.reserve(value.size());
     for (const char ch : value) {
         switch (ch) {
-        case '\\': escaped += "\\\\"; break;
-        case '"': escaped += "\\\""; break;
-        case '\n': escaped += "\\n"; break;
-        case '\r': escaped += "\\r"; break;
-        case '\t': escaped += "\\t"; break;
-        default: escaped.push_back(ch); break;
+        case '\\':
+            escaped += "\\\\";
+            break;
+        case '"':
+            escaped += "\\\"";
+            break;
+        case '\n':
+            escaped += "\\n";
+            break;
+        case '\r':
+            escaped += "\\r";
+            break;
+        case '\t':
+            escaped += "\\t";
+            break;
+        default:
+            escaped.push_back(ch);
+            break;
         }
     }
     return escaped;
@@ -69,31 +80,30 @@ std::string current_timestamp_utc() {
     return stream.str();
 }
 
-std::set<std::string> sensitive_question_keys(const TemplateManifest& manifest) {
+std::set<std::string> sensitive_question_keys(const TemplateManifest &manifest) {
     std::set<std::string> keys;
-    for (const auto& question : manifest.questions) {
+    for (const auto &question : manifest.questions) {
         if (!question.sensitive) {
             continue;
         }
         keys.insert(question.key);
-        for (const auto& alias : question.aliases) {
+        for (const auto &alias : question.aliases) {
             keys.insert(alias);
         }
     }
     return keys;
 }
 
-void append_hook(std::vector<std::string>& hooks,
-                 const std::optional<std::filesystem::path>& path,
-                 const std::string& name) {
+void append_hook(std::vector<std::string> &hooks, const std::optional<std::filesystem::path> &path,
+                 const std::string &name) {
     if (path.has_value()) {
         hooks.push_back(name);
     }
 }
 
-}
+} // namespace
 
-BuildPlanReport build_plan_report(const BuildPlan& plan, const TemplateManifest& manifest) {
+BuildPlanReport build_plan_report(const BuildPlan &plan, const TemplateManifest &manifest) {
     BuildPlanReport report;
     report.build_root = plan.build_root;
     report.existing_path_behavior = plan.existing_path_behavior;
@@ -106,16 +116,16 @@ BuildPlanReport build_plan_report(const BuildPlan& plan, const TemplateManifest&
     return report;
 }
 
-std::string format_build_plan_text(const BuildPlanReport& report) {
+std::string format_build_plan_text(const BuildPlanReport &report) {
     std::ostringstream stream;
     stream << "Build root: " << report.build_root.string() << '\n';
     stream << "Existing path behavior: " << existing_path_behavior_name(report.existing_path_behavior) << '\n';
     stream << "Directories: " << report.directories.size() << '\n';
-    for (const auto& directory : report.directories) {
+    for (const auto &directory : report.directories) {
         stream << "  dir  " << directory.string() << '\n';
     }
     stream << "Files: " << report.files.size() << '\n';
-    for (const auto& file : report.files) {
+    for (const auto &file : report.files) {
         stream << "  file " << file.output_path.string();
         if (file.render_with_prebyte) {
             stream << " [render]";
@@ -123,17 +133,18 @@ std::string format_build_plan_text(const BuildPlanReport& report) {
         stream << '\n';
     }
     stream << "Hooks: " << report.hooks.size() << '\n';
-    for (const auto& hook : report.hooks) {
+    for (const auto &hook : report.hooks) {
         stream << "  hook " << hook << '\n';
     }
     return stream.str();
 }
 
-std::string format_build_plan_json(const BuildPlanReport& report) {
+std::string format_build_plan_json(const BuildPlanReport &report) {
     std::ostringstream stream;
     stream << "{\n";
     stream << "  \"build_root\": \"" << json_escape(report.build_root.string()) << "\",\n";
-    stream << "  \"existing_path_behavior\": \"" << existing_path_behavior_name(report.existing_path_behavior) << "\",\n";
+    stream << "  \"existing_path_behavior\": \"" << existing_path_behavior_name(report.existing_path_behavior)
+           << "\",\n";
     stream << "  \"directories\": [\n";
     for (std::size_t index = 0; index < report.directories.size(); ++index) {
         stream << "    \"" << json_escape(report.directories[index].string()) << "\"";
@@ -145,9 +156,9 @@ std::string format_build_plan_json(const BuildPlanReport& report) {
     stream << "  ],\n";
     stream << "  \"files\": [\n";
     for (std::size_t index = 0; index < report.files.size(); ++index) {
-        const auto& file = report.files[index];
-        stream << "    {\"source\": \"" << json_escape(file.source_path.string())
-               << "\", \"output\": \"" << json_escape(file.output_path.string())
+        const auto &file = report.files[index];
+        stream << "    {\"source\": \"" << json_escape(file.source_path.string()) << "\", \"output\": \""
+               << json_escape(file.output_path.string())
                << "\", \"render\": " << (file.render_with_prebyte ? "true" : "false") << '}';
         if (index + 1 < report.files.size()) {
             stream << ',';
@@ -168,25 +179,17 @@ std::string format_build_plan_json(const BuildPlanReport& report) {
     return stream.str();
 }
 
-std::string format_generation_lock_json(const TemplateManifest& manifest,
-                                        const BuildPlan& plan,
-                                        const std::map<std::string, std::string>& values,
-                                        const HookAcceptance hook_acceptance,
-                                        const bool hooks_disabled) {
-    return format_generation_lock_json(manifest,
-                                       plan,
-                                       values,
-                                       hook_acceptance,
-                                       hooks_disabled,
+std::string format_generation_lock_json(const TemplateManifest &manifest, const BuildPlan &plan,
+                                        const std::map<std::string, std::string> &values,
+                                        const HookAcceptance hook_acceptance, const bool hooks_disabled) {
+    return format_generation_lock_json(manifest, plan, values, hook_acceptance, hooks_disabled,
                                        build_generation_lock_managed_file_hashes(plan));
 }
 
-std::string format_generation_lock_json(const TemplateManifest& manifest,
-                                        const BuildPlan& plan,
-                                        const std::map<std::string, std::string>& values,
-                                        const HookAcceptance hook_acceptance,
-                                        const bool hooks_disabled,
-                                        const std::map<std::string, std::string>& managed_file_hashes) {
+std::string format_generation_lock_json(const TemplateManifest &manifest, const BuildPlan &plan,
+                                        const std::map<std::string, std::string> &values,
+                                        const HookAcceptance hook_acceptance, const bool hooks_disabled,
+                                        const std::map<std::string, std::string> &managed_file_hashes) {
     const std::set<std::string> redacted_keys = sensitive_question_keys(manifest);
     std::ostringstream stream;
     stream << "{\n";
@@ -204,7 +207,8 @@ std::string format_generation_lock_json(const TemplateManifest& manifest,
     stream << "  \"hooks_disabled\": " << (hooks_disabled ? "true" : "false") << ",\n";
     stream << "  \"managed_files\": [\n";
     for (std::size_t index = 0; index < plan.files.size(); ++index) {
-        const auto relative_path = std::filesystem::relative(plan.files[index].output_path, plan.build_root).generic_string();
+        const auto relative_path =
+            std::filesystem::relative(plan.files[index].output_path, plan.build_root).generic_string();
         stream << "    \"" << json_escape(relative_path) << "\"";
         if (index + 1 < plan.files.size()) {
             stream << ',';
@@ -214,7 +218,7 @@ std::string format_generation_lock_json(const TemplateManifest& manifest,
     stream << "  ],\n";
     stream << "  \"managed_file_hashes\": {\n";
     std::size_t hash_index = 0;
-    for (const auto& [relative_path, hash] : managed_file_hashes) {
+    for (const auto &[relative_path, hash] : managed_file_hashes) {
         stream << "    \"" << json_escape(relative_path) << "\": \"" << json_escape(hash) << "\"";
         if (hash_index + 1 < managed_file_hashes.size()) {
             stream << ',';
@@ -225,7 +229,7 @@ std::string format_generation_lock_json(const TemplateManifest& manifest,
     stream << "  },\n";
     stream << "  \"values\": {\n";
     std::size_t index = 0;
-    for (const auto& [key, value] : values) {
+    for (const auto &[key, value] : values) {
         const std::string lock_value = redacted_keys.contains(key) ? std::string{"<redacted>"} : value;
         stream << "    \"" << json_escape(key) << "\": \"" << json_escape(lock_value) << "\"";
         if (index + 1 < values.size()) {
@@ -239,4 +243,4 @@ std::string format_generation_lock_json(const TemplateManifest& manifest,
     return stream.str();
 }
 
-}
+} // namespace tempify

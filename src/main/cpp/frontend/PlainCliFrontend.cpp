@@ -16,7 +16,7 @@ namespace {
 #if !defined(_WIN32)
 using TerminalState = termios;
 
-void restore_terminal_echo(const std::optional<TerminalState>& original) {
+void restore_terminal_echo(const std::optional<TerminalState> &original) {
     if (original.has_value()) {
         tcsetattr(STDIN_FILENO, TCSANOW, &*original);
         std::cout << '\n';
@@ -44,7 +44,7 @@ std::optional<TerminalState> disable_terminal_echo(const bool sensitive) {
 #else
 struct TerminalState {};
 
-void restore_terminal_echo(const std::optional<TerminalState>& original) {
+void restore_terminal_echo(const std::optional<TerminalState> &original) {
     static_cast<void>(original);
 }
 
@@ -54,9 +54,9 @@ std::optional<TerminalState> disable_terminal_echo(const bool sensitive) {
 }
 #endif
 
-}
+} // namespace
 
-std::optional<PromptResult> PlainCliFrontend::prompt(const std::string& text, const bool sensitive) {
+std::optional<PromptResult> PlainCliFrontend::prompt(const std::string &text, const bool sensitive) {
     std::cout << text;
     std::cout.flush();
 
@@ -78,11 +78,11 @@ std::optional<PromptResult> PlainCliFrontend::prompt(const std::string& text, co
     return PromptResult{.action = FrontendAction::Submit, .value = line};
 }
 
-void PlainCliFrontend::write_line(const std::string& text) {
+void PlainCliFrontend::write_line(const std::string &text) {
     std::cout << text << '\n';
 }
 
-void PlainCliFrontend::begin_group(const std::string& name, const std::size_t, const std::size_t) {
+void PlainCliFrontend::begin_group(const std::string &name, const std::size_t, const std::size_t) {
     if (!name.empty()) {
         std::cout << '[' << name << "]\n";
     }
@@ -90,4 +90,4 @@ void PlainCliFrontend::begin_group(const std::string& name, const std::size_t, c
 
 void PlainCliFrontend::end_group() {}
 
-}
+} // namespace tempify

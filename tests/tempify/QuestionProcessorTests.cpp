@@ -1,6 +1,5 @@
-#include "TestHarness.h"
 #include "TempifyTestSupport.h"
-
+#include "TestHarness.h"
 #include "tempify/frontend/IQuestionFrontend.h"
 #include "tempify/lua/LuaEngine.h"
 #include "tempify/question/QuestionProcessor.h"
@@ -17,11 +16,10 @@
 namespace {
 
 class StubFrontend final : public tempify::IQuestionFrontend {
-public:
-    explicit StubFrontend(std::vector<std::string> answers)
-        : answers_(std::move(answers)) {}
+  public:
+    explicit StubFrontend(std::vector<std::string> answers) : answers_(std::move(answers)) {}
 
-    std::optional<tempify::PromptResult> prompt(const std::string& text, const bool sensitive = false) override {
+    std::optional<tempify::PromptResult> prompt(const std::string &text, const bool sensitive = false) override {
         prompts.push_back(text);
         sensitive_prompts.push_back(sensitive);
         if (index_ >= answers_.size()) {
@@ -37,11 +35,11 @@ public:
         return tempify::PromptResult{.action = tempify::FrontendAction::Submit, .value = value};
     }
 
-    void write_line(const std::string& text) override {
+    void write_line(const std::string &text) override {
         lines.push_back(text);
     }
 
-    void begin_group(const std::string& name, const std::size_t index, const std::size_t total) override {
+    void begin_group(const std::string &name, const std::size_t index, const std::size_t total) override {
         groups.push_back(name + ":" + std::to_string(index) + "/" + std::to_string(total));
     }
 
@@ -55,7 +53,7 @@ public:
     std::vector<std::string> groups;
     int ends = 0;
 
-private:
+  private:
     std::vector<std::string> answers_;
     std::size_t index_ = 0;
 };
@@ -65,7 +63,7 @@ tempify::TemplateManifest load_basic_cpp_manifest() {
     return lua_engine.load_partial_manifest(tempify::test_support::test_template_path("basic_cpp"));
 }
 
-}
+} // namespace
 
 TEST_CASE(QuestionProcessor_collect_prompt_loop_and_condition) {
     const tempify::TemplateManifest manifest = load_basic_cpp_manifest();
@@ -124,15 +122,13 @@ TEST_CASE(QuestionProcessor_cli_values_bypass_prompts_and_validate) {
     StubFrontend frontend({});
 
     tempify::QuestionProcessor processor(lua_engine, frontend);
-    const std::map<std::string, std::string> values = processor.collect(
-        manifest,
-        {
-            {"project_name", "CLI App"},
-            {"project_slug", "cli-app"},
-            {"namespace", "cli_ns"},
-            {"include_ci", "false"},
-            {"author", "Leodoras"},
-        });
+    const std::map<std::string, std::string> values = processor.collect(manifest, {
+                                                                                      {"project_name", "CLI App"},
+                                                                                      {"project_slug", "cli-app"},
+                                                                                      {"namespace", "cli_ns"},
+                                                                                      {"include_ci", "false"},
+                                                                                      {"author", "Leodoras"},
+                                                                                  });
 
     REQUIRE_EQ(values.at("project_name"), std::string("CLI App"));
     REQUIRE_EQ(values.at("project_slug"), std::string("cli-app"));
@@ -148,16 +144,14 @@ TEST_CASE(QuestionProcessor_invalid_cli_value_fails_validation) {
 
     tempify::QuestionProcessor processor(lua_engine, frontend);
 
-    REQUIRE_THROWS_AS(
-        processor.collect(
-            manifest,
-            {
-                {"project_name", "Ok Name"},
-                {"project_slug", "Bad Slug"},
-                {"namespace", "cli_ns"},
-                {"include_ci", "false"},
-            }),
-        tempify::TempifyError);
+    REQUIRE_THROWS_AS(processor.collect(manifest,
+                                        {
+                                            {"project_name", "Ok Name"},
+                                            {"project_slug", "Bad Slug"},
+                                            {"namespace", "cli_ns"},
+                                            {"include_ci", "false"},
+                                        }),
+                      tempify::TempifyError);
 }
 
 TEST_CASE(QuestionProcessor_manual_int_help_and_optional_skip) {
@@ -203,14 +197,12 @@ TEST_CASE(QuestionProcessor_alias_cli_value_maps_to_canonical_key) {
     StubFrontend frontend({});
 
     tempify::QuestionProcessor processor(lua_engine, frontend);
-    const std::map<std::string, std::string> values = processor.collect(
-        manifest,
-        {
-            {"project_name", "Alias App"},
-            {"name_slug", "alias-slug"},
-            {"namespace", "alias_ns"},
-            {"include_ci", "false"},
-        });
+    const std::map<std::string, std::string> values = processor.collect(manifest, {
+                                                                                      {"project_name", "Alias App"},
+                                                                                      {"name_slug", "alias-slug"},
+                                                                                      {"namespace", "alias_ns"},
+                                                                                      {"include_ci", "false"},
+                                                                                  });
 
     REQUIRE_EQ(values.at("project_slug"), std::string("alias-slug"));
     REQUIRE_EQ(values.at("name_slug"), std::string("alias-slug"));
@@ -222,16 +214,15 @@ TEST_CASE(QuestionProcessor_hidden_cli_values_are_ignored_when_condition_false) 
     StubFrontend frontend({});
 
     tempify::QuestionProcessor processor(lua_engine, frontend);
-    const std::map<std::string, std::string> values = processor.collect(
-        manifest,
-        {
-            {"project_name", "Alias App"},
-            {"project_slug", "alias-app"},
-            {"namespace", "alias_ns"},
-            {"include_ci", "false"},
-            {"ci_provider", "gitlab"},
-            {"docs_url", "https://docs.example"},
-        });
+    const std::map<std::string, std::string> values =
+        processor.collect(manifest, {
+                                        {"project_name", "Alias App"},
+                                        {"project_slug", "alias-app"},
+                                        {"namespace", "alias_ns"},
+                                        {"include_ci", "false"},
+                                        {"ci_provider", "gitlab"},
+                                        {"docs_url", "https://docs.example"},
+                                    });
 
     REQUIRE(values.find("ci_provider") == values.end());
     REQUIRE(values.find("docs_url") == values.end());
@@ -265,6 +256,44 @@ TEST_CASE(QuestionProcessor_group_navigation_back_reasks_previous_page) {
     REQUIRE(frontend.groups.size() >= static_cast<std::size_t>(3));
 }
 
+TEST_CASE(QuestionProcessor_derives_group_order_from_unordered_questions) {
+    tempify::TemplateManifest manifest;
+    manifest.questions = {
+        tempify::QuestionDefinition{
+            .key = "beta_value",
+            .type = "string",
+            .prompt = "Beta value",
+            .group = "Beta",
+        },
+        tempify::QuestionDefinition{
+            .key = "alpha_value",
+            .type = "string",
+            .prompt = "Alpha value",
+            .group = "Alpha",
+        },
+        tempify::QuestionDefinition{
+            .key = "general_value",
+            .type = "string",
+            .prompt = "General value",
+        },
+    };
+
+    tempify::LuaEngine lua_engine;
+    StubFrontend frontend({
+        "beta-1",
+        "alpha-1",
+        "general-1",
+    });
+
+    tempify::QuestionProcessor processor(lua_engine, frontend);
+    const std::map<std::string, std::string> values = processor.collect(manifest, {});
+
+    REQUIRE_EQ(values.at("beta_value"), std::string("beta-1"));
+    REQUIRE_EQ(values.at("alpha_value"), std::string("alpha-1"));
+    REQUIRE_EQ(values.at("general_value"), std::string("general-1"));
+    REQUIRE_EQ(frontend.groups.size(), static_cast<std::size_t>(3));
+}
+
 TEST_CASE(QuestionProcessor_review_stage_can_go_back_and_confirm) {
     const tempify::TemplateManifest manifest = load_basic_cpp_manifest();
     tempify::LuaEngine lua_engine;
@@ -283,14 +312,8 @@ TEST_CASE(QuestionProcessor_review_stage_can_go_back_and_confirm) {
     });
 
     tempify::QuestionProcessor processor(lua_engine, frontend);
-    const std::map<std::string, std::string> values = processor.collect(
-        manifest,
-        {{"author", "Leodoras"}},
-        {},
-        {},
-        false,
-        false,
-        true);
+    const std::map<std::string, std::string> values =
+        processor.collect(manifest, {{"author", "Leodoras"}}, {}, {}, false, false, true);
 
     REQUIRE_EQ(values.at("project_name"), std::string("Second App"));
     REQUIRE_EQ(values.at("project_slug"), std::string("second-app"));
@@ -328,14 +351,7 @@ TEST_CASE(QuestionProcessor_sensitive_questions_redact_review_defaults_and_mark_
     });
 
     tempify::QuestionProcessor processor(lua_engine, frontend);
-    const std::map<std::string, std::string> values = processor.collect(
-        manifest,
-        {},
-        {},
-        {},
-        false,
-        false,
-        true);
+    const std::map<std::string, std::string> values = processor.collect(manifest, {}, {}, {}, false, false, true);
 
     REQUIRE_EQ(values.at("api_token"), std::string("secret-default"));
     REQUIRE_EQ(values.at("project_name"), std::string("Stone App"));
@@ -351,17 +367,15 @@ TEST_CASE(QuestionProcessor_conflicting_alias_and_canonical_cli_values_throw) {
 
     tempify::QuestionProcessor processor(lua_engine, frontend);
 
-    REQUIRE_THROWS_AS(
-        processor.collect(
-            manifest,
-            {
-                {"project_name", "Alias App"},
-                {"project_slug", "slug-a"},
-                {"name_slug", "slug-b"},
-                {"namespace", "alias_ns"},
-                {"include_ci", "false"},
-            }),
-        tempify::TempifyError);
+    REQUIRE_THROWS_AS(processor.collect(manifest,
+                                        {
+                                            {"project_name", "Alias App"},
+                                            {"project_slug", "slug-a"},
+                                            {"name_slug", "slug-b"},
+                                            {"namespace", "alias_ns"},
+                                            {"include_ci", "false"},
+                                        }),
+                      tempify::TempifyError);
 }
 
 TEST_CASE(QuestionProcessor_cli_bool_and_choice_numeric_values_are_coerced) {
@@ -370,16 +384,15 @@ TEST_CASE(QuestionProcessor_cli_bool_and_choice_numeric_values_are_coerced) {
     StubFrontend frontend({});
 
     tempify::QuestionProcessor processor(lua_engine, frontend);
-    const std::map<std::string, std::string> values = processor.collect(
-        manifest,
-        {
-            {"project_name", "Numeric Choice App"},
-            {"project_slug", "numeric-choice-app"},
-            {"namespace", "numeric_ns"},
-            {"include_ci", "1"},
-            {"ci_provider", "2"},
-            {"docs_url", ""},
-        });
+    const std::map<std::string, std::string> values =
+        processor.collect(manifest, {
+                                        {"project_name", "Numeric Choice App"},
+                                        {"project_slug", "numeric-choice-app"},
+                                        {"namespace", "numeric_ns"},
+                                        {"include_ci", "1"},
+                                        {"ci_provider", "2"},
+                                        {"docs_url", ""},
+                                    });
 
     REQUIRE_EQ(values.at("include_ci"), std::string("true"));
     REQUIRE_EQ(values.at("ci_provider"), std::string("gitlab"));
@@ -427,36 +440,22 @@ TEST_CASE(QuestionProcessor_config_defaults_override_env_but_answers_file_and_cl
     StubFrontend default_frontend({""});
     tempify::QuestionProcessor default_processor(lua_engine, default_frontend);
 
-    const std::map<std::string, std::string> config_default_values = default_processor.collect(
-        manifest,
-        {},
-        {{"flavor", "config-default"}},
-        {},
-        false,
-        false);
+    const std::map<std::string, std::string> config_default_values =
+        default_processor.collect(manifest, {}, {{"flavor", "config-default"}}, {}, false, false);
     REQUIRE_EQ(config_default_values.at("flavor"), std::string("config-default"));
     REQUIRE_EQ(default_frontend.prompts.at(0), std::string("Flavor (default: config-default): "));
 
     StubFrontend imported_frontend({});
     tempify::QuestionProcessor imported_processor(lua_engine, imported_frontend);
     const std::map<std::string, std::string> answer_over_config = imported_processor.collect(
-        manifest,
-        {},
-        {{"flavor", "config-default"}},
-        {{"flavor", "answer-default"}},
-        true,
-        false);
+        manifest, {}, {{"flavor", "config-default"}}, {{"flavor", "answer-default"}}, true, false);
     REQUIRE_EQ(answer_over_config.at("flavor"), std::string("answer-default"));
 
     StubFrontend cli_frontend({});
     tempify::QuestionProcessor cli_processor(lua_engine, cli_frontend);
-    const std::map<std::string, std::string> cli_over_config = cli_processor.collect(
-        manifest,
-        {{"flavor", "cli-default"}},
-        {{"flavor", "config-default"}},
-        {{"flavor", "answer-default"}},
-        true,
-        false);
+    const std::map<std::string, std::string> cli_over_config =
+        cli_processor.collect(manifest, {{"flavor", "cli-default"}}, {{"flavor", "config-default"}},
+                              {{"flavor", "answer-default"}}, true, false);
     REQUIRE_EQ(cli_over_config.at("flavor"), std::string("cli-default"));
 }
 
@@ -466,16 +465,13 @@ TEST_CASE(QuestionProcessor_imported_values_bypass_prompts_and_support_aliases) 
     StubFrontend frontend({});
 
     tempify::QuestionProcessor processor(lua_engine, frontend);
-    const std::map<std::string, std::string> values = processor.collect(
-        manifest,
-        {},
-        {},
-        {
-            {"project_name", "Imported App"},
-            {"name_slug", "imported-app"},
-            {"namespace", "imported_ns"},
-            {"include_ci", "false"},
-        });
+    const std::map<std::string, std::string> values = processor.collect(manifest, {}, {},
+                                                                        {
+                                                                            {"project_name", "Imported App"},
+                                                                            {"name_slug", "imported-app"},
+                                                                            {"namespace", "imported_ns"},
+                                                                            {"include_ci", "false"},
+                                                                        });
 
     REQUIRE_EQ(values.at("project_name"), std::string("Imported App"));
     REQUIRE_EQ(values.at("project_slug"), std::string("imported-app"));
@@ -537,9 +533,8 @@ TEST_CASE(QuestionProcessor_strict_rejects_unknown_imported_keys) {
     StubFrontend frontend({});
 
     tempify::QuestionProcessor processor(lua_engine, frontend);
-    REQUIRE_THROWS_AS(
-        processor.collect(manifest, {}, {}, {{"mystery_key", "value"}}, false, true),
-        tempify::TempifyError);
+    REQUIRE_THROWS_AS(processor.collect(manifest, {}, {}, {{"mystery_key", "value"}}, false, true),
+                      tempify::TempifyError);
 }
 
 TEST_CASE(QuestionProcessor_quit_aborts_collection) {
@@ -573,9 +568,7 @@ TEST_CASE(QuestionProcessor_invalid_choice_configuration_and_unknown_type_throw)
             .type = "choice",
         },
     };
-    REQUIRE_THROWS_AS(
-        processor.collect(missing_choices_manifest, {{"provider", "1"}}),
-        tempify::TempifyError);
+    REQUIRE_THROWS_AS(processor.collect(missing_choices_manifest, {{"provider", "1"}}), tempify::TempifyError);
 
     tempify::TemplateManifest unknown_type_manifest;
     unknown_type_manifest.question_group_order = {"General"};
@@ -585,7 +578,5 @@ TEST_CASE(QuestionProcessor_invalid_choice_configuration_and_unknown_type_throw)
             .type = "float",
         },
     };
-    REQUIRE_THROWS_AS(
-        processor.collect(unknown_type_manifest, {{"ratio", "1.5"}}),
-        tempify::TempifyError);
+    REQUIRE_THROWS_AS(processor.collect(unknown_type_manifest, {{"ratio", "1.5"}}), tempify::TempifyError);
 }

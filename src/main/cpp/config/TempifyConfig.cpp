@@ -1,9 +1,8 @@
 #include "tempify/config/TempifyConfig.h"
 
-#include "tempify/support/Errors.h"
-
 #include "datatypes/Data.h"
 #include "parser/JsonParser.h"
+#include "tempify/support/Errors.h"
 
 #include <filesystem>
 #include <sstream>
@@ -12,9 +11,7 @@ namespace tempify {
 
 namespace {
 
-std::string scalar_to_string(const prebyte::Data& value,
-                             const std::filesystem::path& path,
-                             const std::string& key) {
+std::string scalar_to_string(const prebyte::Data &value, const std::filesystem::path &path, const std::string &key) {
     if (value.is_string()) {
         return value.as_string_ref();
     }
@@ -31,8 +28,7 @@ std::string scalar_to_string(const prebyte::Data& value,
     throw TempifyError("Config value for key '" + key + "' must be scalar in " + path.string());
 }
 
-HookAcceptance parse_hook_acceptance(const std::string& value,
-                                     const std::filesystem::path& path) {
+HookAcceptance parse_hook_acceptance(const std::string &value, const std::filesystem::path &path) {
     if (value == "yes") {
         return HookAcceptance::Yes;
     }
@@ -46,8 +42,7 @@ HookAcceptance parse_hook_acceptance(const std::string& value,
     throw TempifyError("Invalid render.accept_hooks value in config '" + path.string() + "': " + value);
 }
 
-ExistingPathBehavior parse_existing_path_behavior(const std::string& value,
-                                                  const std::filesystem::path& path) {
+ExistingPathBehavior parse_existing_path_behavior(const std::string &value, const std::filesystem::path &path) {
     if (value == "error") {
         return ExistingPathBehavior::Error;
     }
@@ -61,26 +56,22 @@ ExistingPathBehavior parse_existing_path_behavior(const std::string& value,
     throw TempifyError("Invalid render.existing_path_behavior value in config '" + path.string() + "': " + value);
 }
 
-void load_defaults(const prebyte::Data& data,
-                   const std::filesystem::path& path,
-                   TempifyConfig& config) {
+void load_defaults(const prebyte::Data &data, const std::filesystem::path &path, TempifyConfig &config) {
     if (!data.is_map()) {
         throw TempifyError("Field 'defaults' in config must be JSON object: " + path.string());
     }
 
-    for (const auto& [key, value] : data.as_map()) {
+    for (const auto &[key, value] : data.as_map()) {
         config.defaults[key] = scalar_to_string(value, path, key);
     }
 }
 
-void load_render_config(const prebyte::Data& data,
-                        const std::filesystem::path& path,
-                        TempifyConfig& config) {
+void load_render_config(const prebyte::Data &data, const std::filesystem::path &path, TempifyConfig &config) {
     if (!data.is_map()) {
         throw TempifyError("Field 'render' in config must be JSON object: " + path.string());
     }
 
-    for (const auto& [key, value] : data.as_map()) {
+    for (const auto &[key, value] : data.as_map()) {
         if (key == "accept_hooks") {
             if (!value.is_string()) {
                 throw TempifyError("Field 'render.accept_hooks' in config must be string: " + path.string());
@@ -95,7 +86,8 @@ void load_render_config(const prebyte::Data& data,
             }
             const int timeout = value.as_int();
             if (timeout < 0) {
-                throw TempifyError("Field 'render.hook_timeout_ms' in config must be zero or greater: " + path.string());
+                throw TempifyError("Field 'render.hook_timeout_ms' in config must be zero or greater: " +
+                                   path.string());
             }
             config.hook_timeout_ms = timeout;
             continue;
@@ -113,9 +105,9 @@ void load_render_config(const prebyte::Data& data,
     }
 }
 
-}
+} // namespace
 
-TempifyConfig load_tempify_config_file(const std::filesystem::path& path) {
+TempifyConfig load_tempify_config_file(const std::filesystem::path &path) {
     if (!std::filesystem::is_regular_file(path)) {
         throw TempifyError("Config file not found: " + path.string());
     }
@@ -124,7 +116,7 @@ TempifyConfig load_tempify_config_file(const std::filesystem::path& path) {
     prebyte::Data data;
     try {
         data = parser.parse(path);
-    } catch (const std::exception& error) {
+    } catch (const std::exception &error) {
         throw TempifyError("Could not parse config file '" + path.string() + "': " + error.what());
     }
 
@@ -133,7 +125,7 @@ TempifyConfig load_tempify_config_file(const std::filesystem::path& path) {
     }
 
     TempifyConfig config;
-    for (const auto& [key, value] : data.as_map()) {
+    for (const auto &[key, value] : data.as_map()) {
         if (key == "defaults") {
             load_defaults(value, path, config);
             continue;
@@ -150,9 +142,9 @@ TempifyConfig load_tempify_config_file(const std::filesystem::path& path) {
     return config;
 }
 
-TempifyConfig merge_tempify_config(const TempifyConfig& base, const TempifyConfig& overlay) {
+TempifyConfig merge_tempify_config(const TempifyConfig &base, const TempifyConfig &overlay) {
     TempifyConfig merged = base;
-    for (const auto& [key, value] : overlay.defaults) {
+    for (const auto &[key, value] : overlay.defaults) {
         merged.defaults[key] = value;
     }
     if (overlay.hook_acceptance.has_value()) {
@@ -167,4 +159,4 @@ TempifyConfig merge_tempify_config(const TempifyConfig& base, const TempifyConfi
     return merged;
 }
 
-}
+} // namespace tempify

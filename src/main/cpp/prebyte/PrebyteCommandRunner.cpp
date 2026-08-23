@@ -5,7 +5,7 @@
 
 namespace tempify {
 
-int PrebyteCommandRunner::run(const std::vector<std::string>& args) const {
+int PrebyteCommandRunner::run(const std::vector<std::string> &args) const {
     prebyte::CommandParser parser;
     prebyte::AppRunner runner;
     const prebyte::Command command = parser.parse(args);
@@ -13,4 +13,4 @@ int PrebyteCommandRunner::run(const std::vector<std::string>& args) const {
     return 0;
 }
 
-}
+} // namespace tempify

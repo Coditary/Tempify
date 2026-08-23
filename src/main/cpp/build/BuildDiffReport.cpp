@@ -1,14 +1,12 @@
 #include "tempify/build/BuildDiffReport.h"
 
+#include "PrebyteEngine.h"
 #include "tempify/build/GenerationLock.h"
-
 #include "tempify/prebyte/PrebyteRenderer.h"
 #include "tempify/support/Errors.h"
 
-#include "PrebyteEngine.h"
-
-#include <array>
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <fstream>
 #include <limits>
@@ -21,7 +19,7 @@ namespace tempify {
 
 namespace {
 
-std::string read_file(const std::filesystem::path& path) {
+std::string read_file(const std::filesystem::path &path) {
     std::ifstream input(path, std::ios::binary);
     if (!input) {
         throw TempifyError("Could not read file: " + path.string());
@@ -31,9 +29,7 @@ std::string read_file(const std::filesystem::path& path) {
     return stream.str();
 }
 
-std::string render_planned_file(const PlannedFile& file,
-                                const PrebyteRenderer& renderer,
-                                prebyte::Prebyte& engine) {
+std::string render_planned_file(const PlannedFile &file, const PrebyteRenderer &renderer, prebyte::Prebyte &engine) {
     static_cast<void>(renderer);
     if (file.render_with_prebyte) {
         return renderer.render_string(engine, read_file(file.source_path));
@@ -41,17 +37,29 @@ std::string render_planned_file(const PlannedFile& file,
     return read_file(file.source_path);
 }
 
-std::string json_escape(const std::string& value) {
+std::string json_escape(const std::string &value) {
     std::string escaped;
     escaped.reserve(value.size());
     for (const char ch : value) {
         switch (ch) {
-        case '\\': escaped += "\\\\"; break;
-        case '"': escaped += "\\\""; break;
-        case '\n': escaped += "\\n"; break;
-        case '\r': escaped += "\\r"; break;
-        case '\t': escaped += "\\t"; break;
-        default: escaped.push_back(ch); break;
+        case '\\':
+            escaped += "\\\\";
+            break;
+        case '"':
+            escaped += "\\\"";
+            break;
+        case '\n':
+            escaped += "\\n";
+            break;
+        case '\r':
+            escaped += "\\r";
+            break;
+        case '\t':
+            escaped += "\\t";
+            break;
+        default:
+            escaped.push_back(ch);
+            break;
         }
     }
     return escaped;
@@ -153,7 +161,7 @@ std::string update_policy_action_name(const BuildUpdatePolicyAction action) {
     return "unavailable";
 }
 
-std::string template_label(const std::string& template_id, const std::string& template_version) {
+std::string template_label(const std::string &template_id, const std::string &template_version) {
     if (template_id.empty() && template_version.empty()) {
         return "<unknown>";
     }
@@ -166,7 +174,7 @@ std::string template_label(const std::string& template_id, const std::string& te
     return template_id + "@" + template_version;
 }
 
-std::string version_label(const std::string& version) {
+std::string version_label(const std::string &version) {
     return version.empty() ? std::string{"<unknown>"} : version;
 }
 
@@ -238,9 +246,8 @@ std::optional<ParsedSemVer> parse_semver(std::string_view version) {
     std::size_t start = 0;
     while (start <= version.size()) {
         const std::size_t end = version.find('.', start);
-        const std::string_view token = end == std::string_view::npos
-            ? version.substr(start)
-            : version.substr(start, end - start);
+        const std::string_view token =
+            end == std::string_view::npos ? version.substr(start) : version.substr(start, end - start);
         if (token.empty()) {
             return std::nullopt;
         }
@@ -266,8 +273,8 @@ std::optional<ParsedSemVer> parse_semver(std::string_view version) {
         while (build_start <= build.size()) {
             const std::size_t build_end = build.find('.', build_start);
             const std::string_view token = build_end == std::string_view::npos
-                ? build.substr(build_start)
-                : build.substr(build_start, build_end - build_start);
+                                               ? build.substr(build_start)
+                                               : build.substr(build_start, build_end - build_start);
             if (token.empty()) {
                 return std::nullopt;
             }
@@ -288,8 +295,8 @@ std::optional<ParsedSemVer> parse_semver(std::string_view version) {
         while (prerelease_start <= prerelease.size()) {
             const std::size_t prerelease_end = prerelease.find('.', prerelease_start);
             const std::string_view token = prerelease_end == std::string_view::npos
-                ? prerelease.substr(prerelease_start)
-                : prerelease.substr(prerelease_start, prerelease_end - prerelease_start);
+                                               ? prerelease.substr(prerelease_start)
+                                               : prerelease.substr(prerelease_start, prerelease_end - prerelease_start);
             if (token.empty()) {
                 return std::nullopt;
             }
@@ -319,8 +326,7 @@ std::optional<ParsedSemVer> parse_semver(std::string_view version) {
     return parsed;
 }
 
-int compare_version_components(const std::vector<int>& left,
-                               const std::vector<int>& right) {
+int compare_version_components(const std::vector<int> &left, const std::vector<int> &right) {
     const std::size_t size = std::max(left.size(), right.size());
     for (std::size_t index = 0; index < size; ++index) {
         const int left_value = index < left.size() ? left[index] : 0;
@@ -335,8 +341,8 @@ int compare_version_components(const std::vector<int>& left,
     return 0;
 }
 
-int compare_prerelease_identifiers(const std::vector<ParsedSemVerIdentifier>& left,
-                                   const std::vector<ParsedSemVerIdentifier>& right) {
+int compare_prerelease_identifiers(const std::vector<ParsedSemVerIdentifier> &left,
+                                   const std::vector<ParsedSemVerIdentifier> &right) {
     const std::size_t size = std::max(left.size(), right.size());
     for (std::size_t index = 0; index < size; ++index) {
         if (index >= left.size()) {
@@ -346,8 +352,8 @@ int compare_prerelease_identifiers(const std::vector<ParsedSemVerIdentifier>& le
             return 1;
         }
 
-        const auto& left_identifier = left[index];
-        const auto& right_identifier = right[index];
+        const auto &left_identifier = left[index];
+        const auto &right_identifier = right[index];
         if (left_identifier.numeric && right_identifier.numeric) {
             if (left_identifier.numeric_value < right_identifier.numeric_value) {
                 return -1;
@@ -372,8 +378,7 @@ int compare_prerelease_identifiers(const std::vector<ParsedSemVerIdentifier>& le
     return 0;
 }
 
-int compare_semver(const ParsedSemVer& left,
-                   const ParsedSemVer& right) {
+int compare_semver(const ParsedSemVer &left, const ParsedSemVer &right) {
     const int core_comparison = compare_version_components(left.core, right.core);
     if (core_comparison != 0) {
         return core_comparison;
@@ -394,12 +399,11 @@ int compare_semver(const ParsedSemVer& left,
     return compare_prerelease_identifiers(left.prerelease, right.prerelease);
 }
 
-int semver_core_component(const ParsedSemVer& version,
-                          const std::size_t index) {
+int semver_core_component(const ParsedSemVer &version, const std::size_t index) {
     return index < version.core.size() ? version.core[index] : 0;
 }
 
-BuildUpdatePolicy build_update_policy(const BuildUpdateInfo& update) {
+BuildUpdatePolicy build_update_policy(const BuildUpdateInfo &update) {
     switch (update.kind) {
     case BuildUpdateKind::NoOrigin:
         return BuildUpdatePolicy{
@@ -412,7 +416,8 @@ BuildUpdatePolicy build_update_policy(const BuildUpdateInfo& update) {
             return BuildUpdatePolicy{
                 .action = BuildUpdatePolicyAction::Allow,
                 .reason = "equivalent_version_change",
-                .next_step = "Equivalent SemVer precedence detected. Review diff, then reapply ready actions if metadata-only version drift is expected.",
+                .next_step = "Equivalent SemVer precedence detected. Review diff, then reapply ready actions if "
+                             "metadata-only version drift is expected.",
             };
         }
         return BuildUpdatePolicy{
@@ -432,28 +437,32 @@ BuildUpdatePolicy build_update_policy(const BuildUpdateInfo& update) {
                 return BuildUpdatePolicy{
                     .action = BuildUpdatePolicyAction::Review,
                     .reason = "major_version_upgrade",
-                    .next_step = "Major version upgrade detected. Automatic reapply blocked; review compatibility and managed-file changes before continuing.",
+                    .next_step = "Major version upgrade detected. Automatic reapply blocked; review compatibility and "
+                                 "managed-file changes before continuing.",
                 };
             }
             if (from_major == 0 && to_major == 0 && to_minor > from_minor) {
                 return BuildUpdatePolicy{
                     .action = BuildUpdatePolicyAction::Review,
                     .reason = "pre_1_0_minor_upgrade",
-                    .next_step = "Pre-1.0 minor upgrade detected. Automatic reapply blocked; review compatibility before continuing.",
+                    .next_step = "Pre-1.0 minor upgrade detected. Automatic reapply blocked; review compatibility "
+                                 "before continuing.",
                 };
             }
         }
         return BuildUpdatePolicy{
             .action = BuildUpdatePolicyAction::Allow,
             .reason = "forward_version_change",
-            .next_step = "Version upgrade detected. Review diff, then reapply ready actions to move managed files forward.",
+            .next_step =
+                "Version upgrade detected. Review diff, then reapply ready actions to move managed files forward.",
         };
     }
     case BuildUpdateKind::Downgrade:
         return BuildUpdatePolicy{
             .action = BuildUpdatePolicyAction::Review,
             .reason = "backward_version_change",
-            .next_step = "Version downgrade detected. Automatic reapply blocked; inspect lockfile and template version before continuing.",
+            .next_step = "Version downgrade detected. Automatic reapply blocked; inspect lockfile and template version "
+                         "before continuing.",
         };
     case BuildUpdateKind::VersionChange:
         return BuildUpdatePolicy{
@@ -472,17 +481,16 @@ BuildUpdatePolicy build_update_policy(const BuildUpdateInfo& update) {
     return BuildUpdatePolicy{};
 }
 
-std::string update_recommendation(const BuildDiffReport& report) {
+std::string update_recommendation(const BuildDiffReport &report) {
     return report.update_policy.next_step;
 }
 
-bool origin_matches_requested_template(const GenerationLockRecord& lock,
-                                       const TemplateManifest& manifest) {
+bool origin_matches_requested_template(const GenerationLockRecord &lock, const TemplateManifest &manifest) {
     return !lock.template_info.id.empty() && lock.template_info.id == manifest.info.id;
 }
 
-std::optional<std::string> find_managed_file_hash(const std::optional<GenerationLockRecord>& lock,
-                                                  const std::string& relative_path) {
+std::optional<std::string> find_managed_file_hash(const std::optional<GenerationLockRecord> &lock,
+                                                  const std::string &relative_path) {
     if (!lock.has_value()) {
         return std::nullopt;
     }
@@ -493,10 +501,8 @@ std::optional<std::string> find_managed_file_hash(const std::optional<Generation
     return it->second;
 }
 
-BuildDiffReason classify_change_reason(const bool origin_detected,
-                                       const std::optional<std::string>& baseline_hash,
-                                       const std::string& actual_hash,
-                                       const std::string& desired_hash) {
+BuildDiffReason classify_change_reason(const bool origin_detected, const std::optional<std::string> &baseline_hash,
+                                       const std::string &actual_hash, const std::string &desired_hash) {
     if (!baseline_hash.has_value()) {
         return origin_detected ? BuildDiffReason::Unknown : BuildDiffReason::None;
     }
@@ -515,10 +521,9 @@ BuildDiffReason classify_change_reason(const bool origin_detected,
     return BuildDiffReason::Unknown;
 }
 
-BuildDiffReason classify_create_reason(const bool origin_detected,
-                                       const bool previously_managed,
-                                       const std::optional<std::string>& baseline_hash,
-                                       const std::string& desired_hash) {
+BuildDiffReason classify_create_reason(const bool origin_detected, const bool previously_managed,
+                                       const std::optional<std::string> &baseline_hash,
+                                       const std::string &desired_hash) {
     if (!previously_managed) {
         return origin_detected ? BuildDiffReason::TemplateUpdate : BuildDiffReason::None;
     }
@@ -528,9 +533,8 @@ BuildDiffReason classify_create_reason(const bool origin_detected,
     return desired_hash == *baseline_hash ? BuildDiffReason::LocalEdit : BuildDiffReason::Conflict;
 }
 
-BuildDiffReason classify_delete_reason(const bool origin_detected,
-                                       const std::optional<std::string>& baseline_hash,
-                                       const std::filesystem::path& actual_path) {
+BuildDiffReason classify_delete_reason(const bool origin_detected, const std::optional<std::string> &baseline_hash,
+                                       const std::filesystem::path &actual_path) {
     if (!std::filesystem::is_regular_file(actual_path)) {
         return BuildDiffReason::TypeMismatch;
     }
@@ -541,8 +545,7 @@ BuildDiffReason classify_delete_reason(const bool origin_detected,
     return actual_hash == *baseline_hash ? BuildDiffReason::TemplateUpdate : BuildDiffReason::LocalEdit;
 }
 
-BuildReapplyAction classify_reapply_action(const BuildDiffStatus status,
-                                           const BuildDiffReason reason) {
+BuildReapplyAction classify_reapply_action(const BuildDiffStatus status, const BuildDiffReason reason) {
     switch (status) {
     case BuildDiffStatus::Unchanged:
         return BuildReapplyAction::None;
@@ -590,9 +593,9 @@ BuildReapplyAction classify_reapply_action(const BuildDiffStatus status,
     return BuildReapplyAction::Review;
 }
 
-BuildReapplySummary build_reapply_summary(const BuildDiffReport& report) {
+BuildReapplySummary build_reapply_summary(const BuildDiffReport &report) {
     BuildReapplySummary summary;
-    for (const auto& entry : report.entries) {
+    for (const auto &entry : report.entries) {
         switch (entry.reapply_action) {
         case BuildReapplyAction::None:
             break;
@@ -623,9 +626,7 @@ BuildReapplySummary build_reapply_summary(const BuildDiffReport& report) {
 
     if (!report.origin.detected) {
         summary.status = BuildReapplyStatus::Unavailable;
-    } else if (report.update_policy.action == BuildUpdatePolicyAction::Review) {
-        summary.status = BuildReapplyStatus::Review;
-    } else if (summary.review_count > 0) {
+    } else if (report.update_policy.action == BuildUpdatePolicyAction::Review || summary.review_count > 0) {
         summary.status = BuildReapplyStatus::Review;
     } else if (summary.conflict_count > 0) {
         summary.status = BuildReapplyStatus::Conflict;
@@ -636,7 +637,7 @@ BuildReapplySummary build_reapply_summary(const BuildDiffReport& report) {
     return summary;
 }
 
-BuildUpdateInfo build_update_info(const BuildDiffReport& report) {
+BuildUpdateInfo build_update_info(const BuildDiffReport &report) {
     BuildUpdateInfo update;
     update.from_version = report.origin.template_version;
     update.to_version = report.template_version;
@@ -667,9 +668,9 @@ BuildUpdateInfo build_update_info(const BuildDiffReport& report) {
     return update;
 }
 
-std::array<std::size_t, 4> status_counts(const BuildDiffReport& report) {
+std::array<std::size_t, 4> status_counts(const BuildDiffReport &report) {
     std::array<std::size_t, 4> counts = {0, 0, 0, 0};
-    for (const auto& entry : report.entries) {
+    for (const auto &entry : report.entries) {
         switch (entry.status) {
         case BuildDiffStatus::Unchanged:
             ++counts[0];
@@ -688,12 +689,10 @@ std::array<std::size_t, 4> status_counts(const BuildDiffReport& report) {
     return counts;
 }
 
-}
+} // namespace
 
-BuildDiffReport build_diff_report(const BuildPlan& plan,
-                                  const TemplateManifest& manifest,
-                                  const std::map<std::string, std::string>& values,
-                                  const PrebyteRenderer& renderer) {
+BuildDiffReport build_diff_report(const BuildPlan &plan, const TemplateManifest &manifest,
+                                  const std::map<std::string, std::string> &values, const PrebyteRenderer &renderer) {
     prebyte::Prebyte engine;
     renderer.configure(engine, values, manifest);
 
@@ -708,8 +707,8 @@ BuildDiffReport build_diff_report(const BuildPlan& plan,
     if (previous_lock.has_value()) {
         report.origin.detected = true;
         report.origin.matches_requested_template = origin_matches_requested_template(*previous_lock, manifest);
-        report.origin.matches_requested_version = report.origin.matches_requested_template
-            && previous_lock->template_info.version == manifest.info.version;
+        report.origin.matches_requested_version =
+            report.origin.matches_requested_template && previous_lock->template_info.version == manifest.info.version;
         report.origin.lockfile_path = lock_path;
         report.origin.template_id = previous_lock->template_info.id;
         report.origin.template_version = previous_lock->template_info.version;
@@ -717,12 +716,11 @@ BuildDiffReport build_diff_report(const BuildPlan& plan,
     }
 
     report.entries.reserve(plan.files.size());
-    const std::set<std::string> previous_managed_files = previous_lock.has_value()
-        ? previous_lock->managed_files
-        : std::set<std::string>{};
+    const std::set<std::string> previous_managed_files =
+        previous_lock.has_value() ? previous_lock->managed_files : std::set<std::string>{};
     std::set<std::string> current_managed_files;
 
-    for (const auto& file : plan.files) {
+    for (const auto &file : plan.files) {
         const std::filesystem::path relative_path = std::filesystem::relative(file.output_path, plan.build_root);
         const std::string relative_key = relative_path.generic_string();
         current_managed_files.insert(relative_key);
@@ -736,10 +734,7 @@ BuildDiffReport build_diff_report(const BuildPlan& plan,
         BuildDiffReason reason = BuildDiffReason::None;
         if (!std::filesystem::exists(actual_path)) {
             status = BuildDiffStatus::Create;
-            reason = classify_create_reason(report.origin.detected,
-                                           previously_managed,
-                                           baseline_hash,
-                                           expected_hash);
+            reason = classify_create_reason(report.origin.detected, previously_managed, baseline_hash, expected_hash);
         } else if (!std::filesystem::is_regular_file(actual_path)) {
             status = BuildDiffStatus::Change;
             reason = BuildDiffReason::TypeMismatch;
@@ -747,9 +742,7 @@ BuildDiffReport build_diff_report(const BuildPlan& plan,
             const std::string actual = read_file(actual_path);
             if (actual != expected) {
                 status = BuildDiffStatus::Change;
-                reason = classify_change_reason(report.origin.detected,
-                                                baseline_hash,
-                                                content_fingerprint_hex(actual),
+                reason = classify_change_reason(report.origin.detected, baseline_hash, content_fingerprint_hex(actual),
                                                 expected_hash);
             }
         }
@@ -762,7 +755,7 @@ BuildDiffReport build_diff_report(const BuildPlan& plan,
         });
     }
 
-    for (const auto& relative_key : previous_managed_files) {
+    for (const auto &relative_key : previous_managed_files) {
         if (current_managed_files.contains(relative_key)) {
             continue;
         }
@@ -774,18 +767,18 @@ BuildDiffReport build_diff_report(const BuildPlan& plan,
             .relative_path = relative_key,
             .status = BuildDiffStatus::Delete,
             .reason = classify_delete_reason(report.origin.detected,
-                                             find_managed_file_hash(previous_lock, relative_key),
-                                             actual_path),
-            .reapply_action = classify_reapply_action(BuildDiffStatus::Delete,
-                                                      classify_delete_reason(report.origin.detected,
-                                                                             find_managed_file_hash(previous_lock, relative_key),
-                                                                             actual_path)),
+                                             find_managed_file_hash(previous_lock, relative_key), actual_path),
+            .reapply_action = classify_reapply_action(
+                BuildDiffStatus::Delete,
+                classify_delete_reason(report.origin.detected, find_managed_file_hash(previous_lock, relative_key),
+                                       actual_path)),
         });
     }
 
-    std::sort(report.entries.begin(), report.entries.end(), [](const BuildDiffEntry& left, const BuildDiffEntry& right) {
-        return left.relative_path.generic_string() < right.relative_path.generic_string();
-    });
+    std::sort(report.entries.begin(), report.entries.end(),
+              [](const BuildDiffEntry &left, const BuildDiffEntry &right) {
+                  return left.relative_path.generic_string() < right.relative_path.generic_string();
+              });
 
     report.update = build_update_info(report);
     report.update_policy = build_update_policy(report.update);
@@ -794,16 +787,20 @@ BuildDiffReport build_diff_report(const BuildPlan& plan,
     return report;
 }
 
-std::string format_build_diff_text(const BuildDiffReport& report) {
+std::string format_build_diff_text(const BuildDiffReport &report) {
     std::ostringstream stream;
     stream << "Diff " << report.build_root.string() << '\n';
     stream << "Template: " << template_label(report.template_id, report.template_version) << '\n';
     if (report.origin.detected) {
         stream << "Origin lock: " << report.origin.lockfile_path.string() << '\n';
-        stream << "Origin template: " << template_label(report.origin.template_id, report.origin.template_version) << '\n';
-        stream << "Origin generated_at: " << (report.origin.generated_at.empty() ? std::string{"<unknown>"} : report.origin.generated_at) << '\n';
-        stream << "Origin matches requested template: " << (report.origin.matches_requested_template ? "yes" : "no") << '\n';
-        stream << "Origin matches requested version: " << (report.origin.matches_requested_version ? "yes" : "no") << '\n';
+        stream << "Origin template: " << template_label(report.origin.template_id, report.origin.template_version)
+               << '\n';
+        stream << "Origin generated_at: "
+               << (report.origin.generated_at.empty() ? std::string{"<unknown>"} : report.origin.generated_at) << '\n';
+        stream << "Origin matches requested template: " << (report.origin.matches_requested_template ? "yes" : "no")
+               << '\n';
+        stream << "Origin matches requested version: " << (report.origin.matches_requested_version ? "yes" : "no")
+               << '\n';
     } else {
         stream << "Origin lock: <none>\n";
     }
@@ -811,8 +808,8 @@ std::string format_build_diff_text(const BuildDiffReport& report) {
     stream << "Update policy: " << update_policy_action_name(report.update_policy.action) << '\n';
     stream << "Update reason: " << report.update_policy.reason << '\n';
     if (report.origin.detected && report.origin.matches_requested_template) {
-        stream << "Update version: " << version_label(report.update.from_version)
-               << " -> " << version_label(report.update.to_version) << '\n';
+        stream << "Update version: " << version_label(report.update.from_version) << " -> "
+               << version_label(report.update.to_version) << '\n';
     }
     stream << "Update recommendation: " << update_recommendation(report) << '\n';
 
@@ -828,7 +825,7 @@ std::string format_build_diff_text(const BuildDiffReport& report) {
     stream << "Reapply keep: " << report.reapply.keep_count << '\n';
     stream << "Reapply conflict: " << report.reapply.conflict_count << '\n';
     stream << "Reapply review: " << report.reapply.review_count << '\n';
-    for (const auto& entry : report.entries) {
+    for (const auto &entry : report.entries) {
         stream << "  " << status_name(entry.status) << "  " << entry.relative_path.generic_string();
         if (entry.reason != BuildDiffReason::None) {
             stream << " [" << reason_name(entry.reason) << ']';
@@ -841,7 +838,7 @@ std::string format_build_diff_text(const BuildDiffReport& report) {
     return stream.str();
 }
 
-std::string format_build_diff_json(const BuildDiffReport& report) {
+std::string format_build_diff_json(const BuildDiffReport &report) {
     const auto counts = status_counts(report);
     std::ostringstream stream;
     stream << "{\n";
@@ -852,8 +849,10 @@ std::string format_build_diff_json(const BuildDiffReport& report) {
     stream << "  },\n";
     stream << "  \"origin\": {\n";
     stream << "    \"detected\": " << (report.origin.detected ? "true" : "false") << ",\n";
-    stream << "    \"matches_requested_template\": " << (report.origin.matches_requested_template ? "true" : "false") << ",\n";
-    stream << "    \"matches_requested_version\": " << (report.origin.matches_requested_version ? "true" : "false") << ",\n";
+    stream << "    \"matches_requested_template\": " << (report.origin.matches_requested_template ? "true" : "false")
+           << ",\n";
+    stream << "    \"matches_requested_version\": " << (report.origin.matches_requested_version ? "true" : "false")
+           << ",\n";
     stream << "    \"lockfile\": \"" << json_escape(report.origin.lockfile_path.string()) << "\",\n";
     stream << "    \"template_id\": \"" << json_escape(report.origin.template_id) << "\",\n";
     stream << "    \"template_version\": \"" << json_escape(report.origin.template_version) << "\",\n";
@@ -888,9 +887,9 @@ std::string format_build_diff_json(const BuildDiffReport& report) {
     stream << "  },\n";
     stream << "  \"entries\": [\n";
     for (std::size_t index = 0; index < report.entries.size(); ++index) {
-        const auto& entry = report.entries[index];
-        stream << "    {\"path\": \"" << json_escape(entry.relative_path.generic_string())
-               << "\", \"status\": \"" << status_name(entry.status) << "\", \"reason\": ";
+        const auto &entry = report.entries[index];
+        stream << "    {\"path\": \"" << json_escape(entry.relative_path.generic_string()) << "\", \"status\": \""
+               << status_name(entry.status) << "\", \"reason\": ";
         if (entry.reason == BuildDiffReason::None) {
             stream << "null";
         } else {
@@ -913,4 +912,4 @@ std::string format_build_diff_json(const BuildDiffReport& report) {
     return stream.str();
 }
 
-}
+} // namespace tempify

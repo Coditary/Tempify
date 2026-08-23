@@ -6,18 +6,17 @@ namespace tempify {
 
 namespace {
 
-void append_hook(std::ostringstream& stream,
-                 const std::string& name,
-                 const std::optional<std::filesystem::path>& path) {
+void append_hook(std::ostringstream &stream, const std::string &name,
+                 const std::optional<std::filesystem::path> &path) {
     if (!path.has_value()) {
         return;
     }
     stream << "- " << name << ": " << path->string() << '\n';
 }
 
-}
+} // namespace
 
-std::string inspect_template_text(const TemplateManifest& manifest) {
+std::string inspect_template_text(const TemplateManifest &manifest) {
     std::ostringstream stream;
     stream << manifest.info.id;
     if (!manifest.info.name.empty()) {
@@ -30,7 +29,7 @@ std::string inspect_template_text(const TemplateManifest& manifest) {
     stream << "Output: " << manifest.output_path_template << '\n';
 
     stream << "\nSource Roots:\n";
-    for (const auto& source_root : manifest.source_roots) {
+    for (const auto &source_root : manifest.source_roots) {
         stream << "- " << source_root.template_id << ": " << source_root.path.string() << '\n';
     }
 
@@ -38,7 +37,7 @@ std::string inspect_template_text(const TemplateManifest& manifest) {
     if (manifest.include_ids.empty()) {
         stream << "- <none>\n";
     } else {
-        for (const auto& include_id : manifest.include_ids) {
+        for (const auto &include_id : manifest.include_ids) {
             stream << "- " << include_id << '\n';
         }
     }
@@ -47,7 +46,7 @@ std::string inspect_template_text(const TemplateManifest& manifest) {
     if (manifest.files.empty()) {
         stream << "- <none>\n";
     } else {
-        for (const auto& file : manifest.files) {
+        for (const auto &file : manifest.files) {
             stream << "- " << file.relative_path << " <- " << file.source_template_id;
             if (file.render_with_prebyte) {
                 stream << " [render]";
@@ -63,7 +62,7 @@ std::string inspect_template_text(const TemplateManifest& manifest) {
     if (manifest.questions.empty()) {
         stream << "- <none>\n";
     } else {
-        for (const auto& question : manifest.questions) {
+        for (const auto &question : manifest.questions) {
             stream << "- " << question.key << " [" << question.type << "]";
             if (!question.group.empty()) {
                 stream << " group=" << question.group;
@@ -86,7 +85,7 @@ std::string inspect_template_text(const TemplateManifest& manifest) {
     if (manifest.layout_rules.empty()) {
         stream << "- <none>\n";
     } else {
-        for (const auto& rule : manifest.layout_rules) {
+        for (const auto &rule : manifest.layout_rules) {
             stream << "- source=" << rule.source;
             if (rule.target.has_value()) {
                 stream << " target=" << *rule.target;
@@ -109,16 +108,14 @@ std::string inspect_template_text(const TemplateManifest& manifest) {
     if (manifest.scripts.empty()) {
         stream << "- <none>\n";
     } else {
-        for (const auto& script : manifest.scripts) {
+        for (const auto &script : manifest.scripts) {
             stream << "- " << script.name << " <- " << script.path.string() << '\n';
         }
     }
 
     stream << "\nHooks:\n";
-    if (!manifest.pre_hook_path.has_value()
-        && !manifest.before_render_hook_path.has_value()
-        && !manifest.after_render_hook_path.has_value()
-        && !manifest.post_hook_path.has_value()) {
+    if (!manifest.pre_hook_path.has_value() && !manifest.before_render_hook_path.has_value() &&
+        !manifest.after_render_hook_path.has_value() && !manifest.post_hook_path.has_value()) {
         stream << "- <none>\n";
     } else {
         append_hook(stream, "pre", manifest.pre_hook_path);
@@ -130,4 +127,4 @@ std::string inspect_template_text(const TemplateManifest& manifest) {
     return stream.str();
 }
 
-}
+} // namespace tempify

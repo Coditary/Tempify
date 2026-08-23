@@ -1,5 +1,4 @@
 #include "TestHarness.h"
-
 #include "tempify/cli/CliParser.h"
 #include "tempify/domain/CliRequest.h"
 #include "tempify/support/Errors.h"
@@ -56,8 +55,7 @@ TEST_CASE(CliParser_parses_q_refresh_prebyte_info_doctor_validate_inspect_lint_t
 
     const tempify::CliRequest completion = parser.parse({"completion", "bash"});
     REQUIRE(completion.mode == tempify::CliMode::Completion);
-    REQUIRE(completion.completion_shell.has_value());
-    REQUIRE_EQ(*completion.completion_shell, std::string("bash"));
+    REQUIRE_EQ(REQUIRE_VALUE(completion.completion_shell), std::string("bash"));
 
     const tempify::CliRequest validate = parser.parse({"validate", "basic_cpp"});
     REQUIRE(validate.mode == tempify::CliMode::TemplateValidate);
@@ -89,8 +87,7 @@ TEST_CASE(CliParser_parses_q_refresh_prebyte_info_doctor_validate_inspect_lint_t
     const tempify::CliRequest test = parser.parse({"test", "basic_cpp", "--fixture", "ci_enabled", "--json"});
     REQUIRE(test.mode == tempify::CliMode::TemplateTest);
     REQUIRE_EQ(test.template_ref, std::string("basic_cpp"));
-    REQUIRE(test.test_fixture_name.has_value());
-    REQUIRE_EQ(*test.test_fixture_name, std::string("ci_enabled"));
+    REQUIRE_EQ(REQUIRE_VALUE(test.test_fixture_name), std::string("ci_enabled"));
     REQUIRE(!test.test_list_fixtures);
     REQUIRE(test.test_json);
     REQUIRE(!test.test_update_snapshots);
@@ -105,7 +102,8 @@ TEST_CASE(CliParser_parses_q_refresh_prebyte_info_doctor_validate_inspect_lint_t
     REQUIRE(list_json.test_json);
     REQUIRE(list_json.test_list_fixtures);
 
-    const tempify::CliRequest update = parser.parse({"test", "basic_cpp", "--update-snapshots", "--fixture", "ci_enabled"});
+    const tempify::CliRequest update =
+        parser.parse({"test", "basic_cpp", "--update-snapshots", "--fixture", "ci_enabled"});
     REQUIRE(update.mode == tempify::CliMode::TemplateTest);
     REQUIRE(update.test_update_snapshots);
     REQUIRE(update.test_fixture_name.has_value());
@@ -124,29 +122,32 @@ TEST_CASE(CliParser_parses_q_refresh_prebyte_info_doctor_validate_inspect_lint_t
     const tempify::CliRequest render = parser.parse({
         "basic_cpp",
         "out-dir",
-        "--set", "project_name=App",
-        "--var", "namespace=core",
+        "--set",
+        "project_name=App",
+        "--var",
+        "namespace=core",
         "-f",
-        "--accept-hooks", "ask",
-        "--answers", "answers.json",
+        "--accept-hooks",
+        "ask",
+        "--answers",
+        "answers.json",
         "--non-interactive",
         "--strict",
         "--diff",
         "--json",
-        "--hook-timeout-ms", "250",
+        "--hook-timeout-ms",
+        "250",
         "--tui",
     });
     REQUIRE(render.mode == tempify::CliMode::TemplateRender);
     REQUIRE_EQ(render.template_ref, std::string("basic_cpp"));
-    REQUIRE(render.target_dir.has_value());
-    REQUIRE_EQ(render.target_dir->string(), std::string("out-dir"));
+    REQUIRE_EQ(REQUIRE_VALUE(render.target_dir).string(), std::string("out-dir"));
     REQUIRE_EQ(render.variables.at("project_name"), std::string("App"));
     REQUIRE_EQ(render.variables.at("namespace"), std::string("core"));
     REQUIRE(render.existing_path_behavior_override.has_value());
     REQUIRE(render.existing_path_behavior_override == tempify::ExistingPathBehavior::Overwrite);
     REQUIRE(render.hook_acceptance == tempify::HookAcceptance::Ask);
-    REQUIRE(render.answers_file.has_value());
-    REQUIRE_EQ(render.answers_file->string(), std::string("answers.json"));
+    REQUIRE_EQ(REQUIRE_VALUE(render.answers_file).string(), std::string("answers.json"));
     REQUIRE(!render.write_answers_file.has_value());
     REQUIRE(render.non_interactive);
     REQUIRE(render.strict);
@@ -162,7 +163,8 @@ TEST_CASE(CliParser_parses_q_refresh_prebyte_info_doctor_validate_inspect_lint_t
         "out-dir",
         "--reapply",
         "--json",
-        "--set", "project_name=App",
+        "--set",
+        "project_name=App",
     });
     REQUIRE(reapply.mode == tempify::CliMode::TemplateRender);
     REQUIRE(reapply.reapply);
@@ -175,7 +177,8 @@ TEST_CASE(CliParser_parses_q_refresh_prebyte_info_doctor_validate_inspect_lint_t
         "--reapply",
         "--report",
         "--json",
-        "--set", "project_name=App",
+        "--set",
+        "project_name=App",
     });
     REQUIRE(reapply_report.mode == tempify::CliMode::TemplateRender);
     REQUIRE(reapply_report.reapply);
@@ -187,12 +190,12 @@ TEST_CASE(CliParser_parses_q_refresh_prebyte_info_doctor_validate_inspect_lint_t
         "basic_cpp",
         "out-dir",
         "--json",
-        "--set", "project_name=App",
+        "--set",
+        "project_name=App",
     });
     REQUIRE(reapply_subcommand.mode == tempify::CliMode::TemplateRender);
     REQUIRE_EQ(reapply_subcommand.template_ref, std::string("basic_cpp"));
-    REQUIRE(reapply_subcommand.target_dir.has_value());
-    REQUIRE_EQ(reapply_subcommand.target_dir->string(), std::string("out-dir"));
+    REQUIRE_EQ(REQUIRE_VALUE(reapply_subcommand.target_dir).string(), std::string("out-dir"));
     REQUIRE(reapply_subcommand.reapply);
     REQUIRE(reapply_subcommand.diff_json);
     REQUIRE_EQ(reapply_subcommand.variables.at("project_name"), std::string("App"));
@@ -273,8 +276,7 @@ TEST_CASE(CliParser_routes_all_help_topics) {
     REQUIRE(reapply_with_args.help_topic == tempify::HelpTopic::Render);
     REQUIRE(reapply_with_args.reapply);
     REQUIRE_EQ(reapply_with_args.template_ref, std::string("basic_cpp"));
-    REQUIRE(reapply_with_args.target_dir.has_value());
-    REQUIRE_EQ(reapply_with_args.target_dir->string(), std::string("out-dir"));
+    REQUIRE_EQ(REQUIRE_VALUE(reapply_with_args.target_dir).string(), std::string("out-dir"));
 
     const tempify::CliRequest questions = parser.parse({"basic_cpp", "-q", "--help"});
     REQUIRE(questions.mode == tempify::CliMode::Help);
@@ -298,8 +300,7 @@ TEST_CASE(CliParser_routes_all_help_topics) {
     REQUIRE(render.mode == tempify::CliMode::Help);
     REQUIRE(render.help_topic == tempify::HelpTopic::Render);
     REQUIRE_EQ(render.template_ref, std::string("basic_cpp"));
-    REQUIRE(render.target_dir.has_value());
-    REQUIRE_EQ(render.target_dir->string(), std::string("out-dir"));
+    REQUIRE_EQ(REQUIRE_VALUE(render.target_dir).string(), std::string("out-dir"));
 }
 
 TEST_CASE(CliParser_rejects_invalid_assignments_unknown_options_and_extra_targets) {
@@ -317,7 +318,8 @@ TEST_CASE(CliParser_rejects_invalid_assignments_unknown_options_and_extra_target
     REQUIRE_THROWS_AS(parser.parse({"basic_cpp", "out-dir", "--questions"}), tempify::TempifyError);
     REQUIRE_THROWS_AS(parser.parse({"basic_cpp", "out-dir", "-f", "-s"}), tempify::TempifyError);
     REQUIRE_THROWS_AS(parser.parse({"basic_cpp", "out-dir", "--accept-hooks", "maybe"}), tempify::TempifyError);
-    REQUIRE_THROWS_AS(parser.parse({"basic_cpp", "out-dir", "--no-hooks", "--accept-hooks", "yes"}), tempify::TempifyError);
+    REQUIRE_THROWS_AS(parser.parse({"basic_cpp", "out-dir", "--no-hooks", "--accept-hooks", "yes"}),
+                      tempify::TempifyError);
     REQUIRE_THROWS_AS(parser.parse({"basic_cpp", "out-dir", "--hook-timeout-ms", "-1"}), tempify::TempifyError);
     REQUIRE_THROWS_AS(parser.parse({"basic_cpp", "out-dir", "--json"}), tempify::TempifyError);
     REQUIRE_THROWS_AS(parser.parse({"basic_cpp", "out-dir", "--diff", "--plan-json"}), tempify::TempifyError);
@@ -326,9 +328,12 @@ TEST_CASE(CliParser_rejects_invalid_assignments_unknown_options_and_extra_target
     REQUIRE_THROWS_AS(parser.parse({"reapply"}), tempify::TempifyError);
     REQUIRE_THROWS_AS(parser.parse({"reapply", "basic_cpp"}), tempify::TempifyError);
     REQUIRE_THROWS_AS(parser.parse({"basic_cpp", "out-dir", "--report"}), tempify::TempifyError);
-    REQUIRE_THROWS_AS(parser.parse({"basic_cpp", "out-dir", "--reapply", "--report", "--write-answers", "answers.json"}), tempify::TempifyError);
+    REQUIRE_THROWS_AS(
+        parser.parse({"basic_cpp", "out-dir", "--reapply", "--report", "--write-answers", "answers.json"}),
+        tempify::TempifyError);
     REQUIRE_THROWS_AS(parser.parse({"reapply", "basic_cpp", "out-dir", "--diff"}), tempify::TempifyError);
-    REQUIRE_THROWS_AS(parser.parse({"reapply", "basic_cpp", "out-dir", "--report", "--write-answers", "answers.json"}), tempify::TempifyError);
+    REQUIRE_THROWS_AS(parser.parse({"reapply", "basic_cpp", "out-dir", "--report", "--write-answers", "answers.json"}),
+                      tempify::TempifyError);
     REQUIRE_THROWS_AS(parser.parse({"doctor", "--wat"}), tempify::TempifyError);
     REQUIRE_THROWS_AS(parser.parse({"completion"}), tempify::TempifyError);
     REQUIRE_THROWS_AS(parser.parse({"completion", "pwsh"}), tempify::TempifyError);

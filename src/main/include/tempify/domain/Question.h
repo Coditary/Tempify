@@ -26,4 +26,4 @@ struct QuestionDefinition {
     bool sensitive = false;
 };
 
-}
+} // namespace tempify

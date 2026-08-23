@@ -1,0 +1,1 @@
+--set --var --answers --write-answers --non-interactive --strict --hook-timeout-ms --dry-run --plan-json --diff --reapply --report --json --tui -f -s -q --questions --full --accept-hooks yes

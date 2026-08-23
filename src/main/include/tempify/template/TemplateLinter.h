@@ -8,11 +8,10 @@
 namespace tempify {
 
 class TemplateLinter {
-public:
-    std::vector<std::string> lint(const TemplateManifest& manifest) const;
+  public:
+    std::vector<std::string> lint(const TemplateManifest &manifest) const;
 };
 
-std::string format_template_lint_text(const std::string& template_id,
-                                      const std::vector<std::string>& warnings);
+std::string format_template_lint_text(const std::string &template_id, const std::vector<std::string> &warnings);
 
-}
+} // namespace tempify

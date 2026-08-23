@@ -1,0 +1,33 @@
+{
+  "tempify_version": "0.1.2",
+  "template": {
+    "id": "basic_cpp",
+    "name": "Basic C++ App",
+    "version": "0.1.0",
+    "root": "/tmp/templates/basic_cpp"
+  },
+  "build_root": "/tmp/basic-cpp-out",
+  "generated_at": "2026-08-22T10:00:00Z",
+  "existing_path_behavior": "skip",
+  "hook_acceptance": "ask",
+  "hooks_disabled": false,
+  "managed_files": [
+    "README.md",
+    "CMakeLists.txt",
+    "src/main.cpp",
+    ".tempify-summary.txt"
+  ],
+  "managed_file_hashes": {
+    "README.md": "abc123def456",
+    "CMakeLists.txt": "deadbeef",
+    "src/main.cpp": "cafebabe",
+    ".tempify-summary.txt": "00112233"
+  },
+  "values": {
+    "project_name": "Basic App",
+    "name_slug": "basic-app",
+    "namespace": "basic_ns",
+    "include_ci": "false",
+    "author": "Tester"
+  }
+}

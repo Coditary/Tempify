@@ -18,13 +18,13 @@ struct PromptResult {
 };
 
 class IQuestionFrontend {
-public:
+  public:
     virtual ~IQuestionFrontend() = default;
 
-    virtual std::optional<PromptResult> prompt(const std::string& text, bool sensitive = false) = 0;
-    virtual void write_line(const std::string& text) = 0;
-    virtual void begin_group(const std::string& name, std::size_t index, std::size_t total) = 0;
+    virtual std::optional<PromptResult> prompt(const std::string &text, bool sensitive = false) = 0;
+    virtual void write_line(const std::string &text) = 0;
+    virtual void begin_group(const std::string &name, std::size_t index, std::size_t total) = 0;
     virtual void end_group() = 0;
 };
 
-}
+} // namespace tempify

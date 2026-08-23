@@ -1,10 +1,9 @@
 #include "tempify/store/LocalTemplateStore.h"
 
-#include "tempify/support/Errors.h"
-#include "tempify/template/TemplateLoader.h"
-
 #include "datatypes/Data.h"
 #include "parser/JsonParser.h"
+#include "tempify/support/Errors.h"
+#include "tempify/template/TemplateLoader.h"
 
 #include <algorithm>
 #include <fstream>
@@ -15,23 +14,35 @@ namespace tempify {
 
 namespace {
 
-std::string json_escape(const std::string& value) {
+std::string json_escape(const std::string &value) {
     std::string escaped;
     escaped.reserve(value.size());
     for (const char ch : value) {
         switch (ch) {
-        case '\\': escaped += "\\\\"; break;
-        case '"': escaped += "\\\""; break;
-        case '\n': escaped += "\\n"; break;
-        case '\r': escaped += "\\r"; break;
-        case '\t': escaped += "\\t"; break;
-        default: escaped.push_back(ch); break;
+        case '\\':
+            escaped += "\\\\";
+            break;
+        case '"':
+            escaped += "\\\"";
+            break;
+        case '\n':
+            escaped += "\\n";
+            break;
+        case '\r':
+            escaped += "\\r";
+            break;
+        case '\t':
+            escaped += "\\t";
+            break;
+        default:
+            escaped.push_back(ch);
+            break;
         }
     }
     return escaped;
 }
 
-void write_text_file(const std::filesystem::path& path, const std::string& content) {
+void write_text_file(const std::filesystem::path &path, const std::string &content) {
     std::filesystem::create_directories(path.parent_path());
     std::ofstream output(path, std::ios::binary);
     if (!output) {
@@ -40,7 +51,7 @@ void write_text_file(const std::filesystem::path& path, const std::string& conte
     output << content;
 }
 
-std::vector<StoredTemplateRecord> load_index(const std::filesystem::path& path) {
+std::vector<StoredTemplateRecord> load_index(const std::filesystem::path &path) {
     std::vector<StoredTemplateRecord> entries;
     if (!std::filesystem::is_regular_file(path)) {
         return entries;
@@ -52,17 +63,17 @@ std::vector<StoredTemplateRecord> load_index(const std::filesystem::path& path) 
         throw TempifyError("Template store index must be JSON object: " + path.string());
     }
 
-    const auto& root = data.as_map();
+    const auto &root = data.as_map();
     const auto it = root.find("templates");
     if (it == root.end() || !it->second.is_array()) {
         return entries;
     }
 
-    for (const auto& item : it->second.as_array()) {
+    for (const auto &item : it->second.as_array()) {
         if (!item.is_map()) {
             continue;
         }
-        const auto& object = item.as_map();
+        const auto &object = item.as_map();
         entries.push_back({
             .id = object.at("id").as_string(),
             .name = object.at("name").as_string(),
@@ -76,17 +87,14 @@ std::vector<StoredTemplateRecord> load_index(const std::filesystem::path& path) 
     return entries;
 }
 
-void save_index(const std::filesystem::path& path,
-                const std::vector<StoredTemplateRecord>& entries) {
+void save_index(const std::filesystem::path &path, const std::vector<StoredTemplateRecord> &entries) {
     std::ostringstream stream;
     stream << "{\n  \"templates\": [\n";
     for (std::size_t index = 0; index < entries.size(); ++index) {
-        const auto& entry = entries[index];
-        stream << "    {\"id\": \"" << json_escape(entry.id)
-               << "\", \"name\": \"" << json_escape(entry.name)
-               << "\", \"description\": \"" << json_escape(entry.description)
-               << "\", \"version\": \"" << json_escape(entry.version)
-               << "\", \"path\": \"" << json_escape(entry.path.string()) << "\"}";
+        const auto &entry = entries[index];
+        stream << "    {\"id\": \"" << json_escape(entry.id) << "\", \"name\": \"" << json_escape(entry.name)
+               << "\", \"description\": \"" << json_escape(entry.description) << "\", \"version\": \""
+               << json_escape(entry.version) << "\", \"path\": \"" << json_escape(entry.path.string()) << "\"}";
         if (index + 1 < entries.size()) {
             stream << ',';
         }
@@ -109,27 +117,25 @@ void save_index(const std::filesystem::path& path,
     }
 }
 
-}
+} // namespace
 
-LocalTemplateStore::LocalTemplateStore(std::filesystem::path shared_root)
-    : root_(std::filesystem::absolute(std::move(shared_root))),
-      templates_root_(root_ / "templates"),
-      index_root_(root_ / "index"),
+LocalTemplateStore::LocalTemplateStore(const std::filesystem::path &shared_root)
+    : root_(std::filesystem::absolute(shared_root)), templates_root_(root_ / "templates"), index_root_(root_ / "index"),
       index_file_(index_root_ / "templates.json") {}
 
-const std::filesystem::path& LocalTemplateStore::root() const noexcept {
+const std::filesystem::path &LocalTemplateStore::root() const noexcept {
     return root_;
 }
 
-const std::filesystem::path& LocalTemplateStore::templates_root() const noexcept {
+const std::filesystem::path &LocalTemplateStore::templates_root() const noexcept {
     return templates_root_;
 }
 
-const std::filesystem::path& LocalTemplateStore::index_root() const noexcept {
+const std::filesystem::path &LocalTemplateStore::index_root() const noexcept {
     return index_root_;
 }
 
-const std::filesystem::path& LocalTemplateStore::index_file() const noexcept {
+const std::filesystem::path &LocalTemplateStore::index_file() const noexcept {
     return index_file_;
 }
 
@@ -137,8 +143,8 @@ std::vector<StoredTemplateRecord> LocalTemplateStore::list_templates() const {
     return load_index(index_file_);
 }
 
-std::optional<StoredTemplateRecord> LocalTemplateStore::find_template(const std::string& id) const {
-    for (const auto& entry : list_templates()) {
+std::optional<StoredTemplateRecord> LocalTemplateStore::find_template(const std::string &id) const {
+    for (const auto &entry : list_templates()) {
         if (entry.id == id) {
             return entry;
         }
@@ -146,24 +152,24 @@ std::optional<StoredTemplateRecord> LocalTemplateStore::find_template(const std:
     return std::nullopt;
 }
 
-std::size_t LocalTemplateStore::refresh(const TemplateLoader& loader) const {
+std::size_t LocalTemplateStore::refresh(const TemplateLoader &loader) const {
     std::filesystem::create_directories(templates_root_);
     std::filesystem::create_directories(index_root_);
 
     std::map<std::string, StoredTemplateRecord> entries;
     std::vector<std::filesystem::path> template_roots;
-    for (const auto& entry : std::filesystem::directory_iterator(templates_root_)) {
+    for (const auto &entry : std::filesystem::directory_iterator(templates_root_)) {
         if (entry.is_directory()) {
             template_roots.push_back(entry.path());
         }
     }
     std::ranges::sort(template_roots);
 
-    for (const auto& template_root : template_roots) {
+    for (const auto &template_root : template_roots) {
         TemplateInfo info;
         try {
             info = loader.summarize(template_root);
-        } catch (const TempifyError&) {
+        } catch (const TempifyError &) {
             continue;
         }
 
@@ -183,7 +189,7 @@ std::size_t LocalTemplateStore::refresh(const TemplateLoader& loader) const {
 
     std::vector<StoredTemplateRecord> ordered;
     ordered.reserve(entries.size());
-    for (const auto& [id, entry] : entries) {
+    for (const auto &[id, entry] : entries) {
         static_cast<void>(id);
         ordered.push_back(entry);
     }
@@ -192,4 +198,4 @@ std::size_t LocalTemplateStore::refresh(const TemplateLoader& loader) const {
     return ordered.size();
 }
 
-}
+} // namespace tempify

@@ -16,7 +16,7 @@ struct TempifyConfig {
     std::optional<ExistingPathBehavior> existing_path_behavior;
 };
 
-TempifyConfig load_tempify_config_file(const std::filesystem::path& path);
-TempifyConfig merge_tempify_config(const TempifyConfig& base, const TempifyConfig& overlay);
+TempifyConfig load_tempify_config_file(const std::filesystem::path &path);
+TempifyConfig merge_tempify_config(const TempifyConfig &base, const TempifyConfig &overlay);
 
-}
+} // namespace tempify

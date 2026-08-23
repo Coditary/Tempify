@@ -1,5 +1,4 @@
 #include "TempifyAppInternal.h"
-
 #include "tempify/frontend/IQuestionFrontend.h"
 #include "tempify/frontend/PlainCliFrontend.h"
 #include "tempify/frontend/WizardFrontend.h"
@@ -17,8 +16,8 @@ namespace tempify::app_internal {
 
 namespace {
 
-bool visible_record_beats(const tempify::app_internal::VisibleTemplateRecord& candidate,
-                          const tempify::app_internal::VisibleTemplateRecord& current) {
+bool visible_record_beats(const tempify::app_internal::VisibleTemplateRecord &candidate,
+                          const tempify::app_internal::VisibleTemplateRecord &current) {
     using tempify::app_internal::VisibleTemplateStatus;
 
     auto rank = [](const VisibleTemplateStatus status) {
@@ -36,14 +35,14 @@ bool visible_record_beats(const tempify::app_internal::VisibleTemplateRecord& ca
     return rank(candidate.status) > rank(current.status);
 }
 
-std::vector<std::filesystem::path> scan_template_roots(const std::filesystem::path& templates_root) {
+std::vector<std::filesystem::path> scan_template_roots(const std::filesystem::path &templates_root) {
     std::vector<std::filesystem::path> roots;
     std::error_code error;
     if (!std::filesystem::is_directory(templates_root, error)) {
         return roots;
     }
 
-    for (const auto& entry : std::filesystem::directory_iterator(templates_root, error)) {
+    for (const auto &entry : std::filesystem::directory_iterator(templates_root, error)) {
         if (error) {
             break;
         }
@@ -56,21 +55,20 @@ std::vector<std::filesystem::path> scan_template_roots(const std::filesystem::pa
     return roots;
 }
 
-}
+} // namespace
 
-TemplateCatalog build_catalog(const std::optional<std::filesystem::path>& workspace_templates_root,
-                              const LocalTemplateStore& store,
-                              const AvailableTemplateCache& available_cache,
-                              const TemplateLoader& loader) {
+TemplateCatalog build_catalog(const std::optional<std::filesystem::path> &workspace_templates_root,
+                              const LocalTemplateStore &store, const AvailableTemplateCache &available_cache,
+                              const TemplateLoader &loader) {
     TemplateCatalog catalog;
     std::map<std::string, VisibleTemplateRecord> visible_by_id;
 
     if (workspace_templates_root.has_value()) {
-        for (const auto& root : scan_template_roots(*workspace_templates_root)) {
+        for (const auto &root : scan_template_roots(*workspace_templates_root)) {
             TemplateInfo info;
             try {
                 info = loader.summarize(root);
-            } catch (const TempifyError&) {
+            } catch (const TempifyError &) {
                 continue;
             }
             if (catalog.index.contains(info.id)) {
@@ -78,7 +76,7 @@ TemplateCatalog build_catalog(const std::optional<std::filesystem::path>& worksp
             }
             catalog.index[info.id] = root;
             catalog.infos.push_back(std::move(info));
-            const TemplateInfo& stored = catalog.infos.back();
+            const TemplateInfo &stored = catalog.infos.back();
             visible_by_id[stored.id] = VisibleTemplateRecord{
                 .info = stored,
                 .status = VisibleTemplateStatus::Workspace,
@@ -88,13 +86,14 @@ TemplateCatalog build_catalog(const std::optional<std::filesystem::path>& worksp
     }
 
     std::set<std::string> shared_ids;
-    for (const auto& entry : store.list_templates()) {
+    for (const auto &entry : store.list_templates()) {
         if (!shared_ids.insert(entry.id).second) {
             throw TempifyError("Duplicate shared template id found in index: " + entry.id);
         }
 
         std::error_code error;
-        if (!std::filesystem::is_directory(entry.path, error) || !std::filesystem::is_regular_file(entry.path / "template.lua", error)) {
+        if (!std::filesystem::is_directory(entry.path, error) ||
+            !std::filesystem::is_regular_file(entry.path / "template.lua", error)) {
             continue;
         }
 
@@ -118,16 +117,17 @@ TemplateCatalog build_catalog(const std::optional<std::filesystem::path>& worksp
         };
     }
 
-    for (const auto& entry : available_cache.list_templates()) {
+    for (const auto &entry : available_cache.list_templates()) {
         catalog.available_index[entry.id] = entry;
         VisibleTemplateRecord candidate{
-            .info = TemplateInfo{
-                .id = entry.id,
-                .name = entry.name,
-                .description = entry.description,
-                .version = entry.version,
-                .root = {},
-            },
+            .info =
+                TemplateInfo{
+                    .id = entry.id,
+                    .name = entry.name,
+                    .description = entry.description,
+                    .version = entry.version,
+                    .root = {},
+                },
             .status = VisibleTemplateStatus::Available,
             .installed = false,
             .available = entry,
@@ -142,22 +142,20 @@ TemplateCatalog build_catalog(const std::optional<std::filesystem::path>& worksp
     }
 
     std::ranges::sort(catalog.infos, {}, &TemplateInfo::id);
-    for (const auto& [id, record] : visible_by_id) {
+    for (const auto &[id, record] : visible_by_id) {
         static_cast<void>(id);
         catalog.visible.push_back(record);
     }
-    std::ranges::sort(catalog.visible, {}, [](const VisibleTemplateRecord& record) {
-        return record.info.id;
-    });
+    std::ranges::sort(catalog.visible, {}, [](const VisibleTemplateRecord &record) { return record.info.id; });
     return catalog;
 }
 
-std::filesystem::path resolve_template_root(const CliRequest& request,
-                                            const TemplateCatalog& catalog,
-                                            const LocalTemplateStore& store) {
+std::filesystem::path resolve_template_root(const CliRequest &request, const TemplateCatalog &catalog,
+                                            const LocalTemplateStore &store) {
     const std::filesystem::path candidate = request.template_ref;
     std::error_code error;
-    if (std::filesystem::is_directory(candidate, error) && std::filesystem::is_regular_file(candidate / "template.lua", error)) {
+    if (std::filesystem::is_directory(candidate, error) &&
+        std::filesystem::is_regular_file(candidate / "template.lua", error)) {
         return std::filesystem::absolute(candidate);
     }
 
@@ -168,8 +166,8 @@ std::filesystem::path resolve_template_root(const CliRequest& request,
 
     if (const auto shared = store.find_template(request.template_ref)) {
         std::error_code shared_error;
-        if (std::filesystem::is_directory(shared->path, shared_error)
-            && std::filesystem::is_regular_file(shared->path / "template.lua", shared_error)) {
+        if (std::filesystem::is_directory(shared->path, shared_error) &&
+            std::filesystem::is_regular_file(shared->path / "template.lua", shared_error)) {
             return std::filesystem::absolute(shared->path);
         }
         throw TempifyError("Shared template '" + request.template_ref + "' is missing on disk. Run `tempify refresh`.");
@@ -178,14 +176,14 @@ std::filesystem::path resolve_template_root(const CliRequest& request,
     throw TempifyError("Template not found: " + request.template_ref);
 }
 
-void print_catalog(const TemplateCatalog& catalog) {
+void print_catalog(const TemplateCatalog &catalog) {
     if (catalog.visible.empty()) {
         std::cout << "No compatible Tempify templates found\n";
         return;
     }
 
-    for (const auto& record : catalog.visible) {
-        const auto& info = record.info;
+    for (const auto &record : catalog.visible) {
+        const auto &info = record.info;
         std::cout << info.id;
         if (!info.name.empty()) {
             std::cout << "\t" << info.name;
@@ -216,4 +214,4 @@ std::unique_ptr<IQuestionFrontend> make_frontend(const bool use_tui) {
     return std::make_unique<PlainCliFrontend>();
 }
 
-}
+} // namespace tempify::app_internal

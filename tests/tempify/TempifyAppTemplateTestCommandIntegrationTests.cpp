@@ -5,14 +5,14 @@
 
 namespace {
 
+using tempify::test_support::create_required_only_template;
+using tempify::test_support::read_text_file;
 using tempify::test_support::ScopedDirectoryCleanup;
 using tempify::test_support::ScopedStdoutCapture;
 using tempify::test_support::ScopedTempifyDataHome;
-using tempify::test_support::create_required_only_template;
-using tempify::test_support::read_text_file;
 using tempify::test_support::write_text_file;
 
-}
+} // namespace
 
 TEST_CASE(TempifyApp_test_runs_template_fixtures) {
     ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-test-data-home");
@@ -44,7 +44,8 @@ TEST_CASE(TempifyApp_test_fixture_flag_runs_single_named_fixture) {
 }
 
 TEST_CASE(TempifyApp_test_list_fixtures_outputs_names_only) {
-    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-test-list-fixtures-data-home");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() /
+                                    "tempify-app-test-list-fixtures-data-home");
     tempify::TempifyApp app;
     ScopedStdoutCapture capture;
 
@@ -101,10 +102,12 @@ TEST_CASE(TempifyApp_test_json_outputs_machine_readable_report) {
 }
 
 TEST_CASE(TempifyApp_test_json_reports_failures_machine_readably) {
-    ScopedDirectoryCleanup template_root(std::filesystem::temp_directory_path() / "tempify-app-test-json-fail-template");
+    ScopedDirectoryCleanup template_root(std::filesystem::temp_directory_path() /
+                                         "tempify-app-test-json-fail-template");
     ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-test-json-fail-data-home");
     const std::filesystem::path template_path = create_required_only_template(template_root.path());
-    write_text_file(template_path / "tests" / "broken_case" / "answers.json", "{\n  \"required_name\": \"Mismatch App\"\n}\n");
+    write_text_file(template_path / "tests" / "broken_case" / "answers.json",
+                    "{\n  \"required_name\": \"Mismatch App\"\n}\n");
     write_text_file(template_path / "tests" / "broken_case" / "snapshot" / "README.md", "# Wrong App\n");
 
     tempify::TempifyApp app;
@@ -125,7 +128,8 @@ TEST_CASE(TempifyApp_test_update_snapshots_rewrites_fixture_outputs) {
     ScopedDirectoryCleanup template_root(std::filesystem::temp_directory_path() / "tempify-app-test-update-template");
     ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-test-update-data-home");
     const std::filesystem::path template_path = create_required_only_template(template_root.path());
-    write_text_file(template_path / "tests" / "refresh_case" / "answers.json", "{\n  \"required_name\": \"Updated App\"\n}\n");
+    write_text_file(template_path / "tests" / "refresh_case" / "answers.json",
+                    "{\n  \"required_name\": \"Updated App\"\n}\n");
     write_text_file(template_path / "tests" / "refresh_case" / "snapshot" / "README.md", "# Old App\n");
 
     tempify::TempifyApp app;
@@ -134,14 +138,17 @@ TEST_CASE(TempifyApp_test_update_snapshots_rewrites_fixture_outputs) {
     REQUIRE_EQ(app.run({"test", template_path.string(), "--update-snapshots"}), 0);
     const std::string output = capture.str();
     REQUIRE(output.find("PASS refresh_case (1 files)") != std::string::npos);
-    REQUIRE(read_text_file(template_path / "tests" / "refresh_case" / "snapshot" / "README.md") == std::string("# Updated App\n"));
+    REQUIRE(read_text_file(template_path / "tests" / "refresh_case" / "snapshot" / "README.md") ==
+            std::string("# Updated App\n"));
 }
 
 TEST_CASE(TempifyApp_test_update_snapshots_rewrites_lock_snapshot_when_present) {
-    ScopedDirectoryCleanup template_root(std::filesystem::temp_directory_path() / "tempify-app-test-update-lock-template");
+    ScopedDirectoryCleanup template_root(std::filesystem::temp_directory_path() /
+                                         "tempify-app-test-update-lock-template");
     ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-test-update-lock-data-home");
     const std::filesystem::path template_path = create_required_only_template(template_root.path());
-    write_text_file(template_path / "tests" / "refresh_lock" / "answers.json", "{\n  \"required_name\": \"Lock App\"\n}\n");
+    write_text_file(template_path / "tests" / "refresh_lock" / "answers.json",
+                    "{\n  \"required_name\": \"Lock App\"\n}\n");
     write_text_file(template_path / "tests" / "refresh_lock" / "snapshot" / "README.md", "# stale\n");
     write_text_file(template_path / "tests" / "refresh_lock" / "lock.json", "{\n  \"generated_at\": \"stale\"\n}\n");
 
@@ -154,7 +161,8 @@ TEST_CASE(TempifyApp_test_update_snapshots_rewrites_lock_snapshot_when_present) 
 }
 
 TEST_CASE(TempifyApp_test_fixture_flag_rejects_unknown_fixture) {
-    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-test-filtered-missing-data-home");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() /
+                                    "tempify-app-test-filtered-missing-data-home");
     tempify::TempifyApp app;
     ScopedStdoutCapture capture;
 
@@ -195,9 +203,11 @@ TEST_CASE(TempifyApp_test_reports_snapshot_mismatch_with_diff_hint) {
     ScopedDirectoryCleanup template_root(std::filesystem::temp_directory_path() / "tempify-app-test-mismatch-template");
     ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-test-mismatch-data-home");
     const std::filesystem::path template_path = create_required_only_template(template_root.path());
-    write_text_file(template_path / "tests" / "broken_case" / "answers.json", "{\n  \"required_name\": \"Mismatch App\"\n}\n");
+    write_text_file(template_path / "tests" / "broken_case" / "answers.json",
+                    "{\n  \"required_name\": \"Mismatch App\"\n}\n");
     write_text_file(template_path / "tests" / "broken_case" / "snapshot" / "README.md", "# Wrong App\n");
-    write_text_file(template_path / "tests" / "passing_case" / "answers.json", "{\n  \"required_name\": \"Passing App\"\n}\n");
+    write_text_file(template_path / "tests" / "passing_case" / "answers.json",
+                    "{\n  \"required_name\": \"Passing App\"\n}\n");
     write_text_file(template_path / "tests" / "passing_case" / "snapshot" / "README.md", "# Passing App\n");
 
     tempify::TempifyApp app;
@@ -216,7 +226,8 @@ TEST_CASE(TempifyApp_test_reports_missing_and_unexpected_snapshot_files) {
     ScopedDirectoryCleanup template_root(std::filesystem::temp_directory_path() / "tempify-app-test-file-set-template");
     ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-test-file-set-data-home");
     const std::filesystem::path template_path = create_required_only_template(template_root.path());
-    write_text_file(template_path / "tests" / "wrong_files" / "answers.json", "{\n  \"required_name\": \"Wrong Files App\"\n}\n");
+    write_text_file(template_path / "tests" / "wrong_files" / "answers.json",
+                    "{\n  \"required_name\": \"Wrong Files App\"\n}\n");
     write_text_file(template_path / "tests" / "wrong_files" / "snapshot" / "expected-only.txt", "only in snapshot\n");
 
     tempify::TempifyApp app;
@@ -231,18 +242,23 @@ TEST_CASE(TempifyApp_test_reports_missing_and_unexpected_snapshot_files) {
 }
 
 TEST_CASE(TempifyApp_test_rejects_fixture_missing_snapshot_directory) {
-    ScopedDirectoryCleanup template_root(std::filesystem::temp_directory_path() / "tempify-app-test-missing-snapshot-template");
-    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-test-missing-snapshot-data-home");
+    ScopedDirectoryCleanup template_root(std::filesystem::temp_directory_path() /
+                                         "tempify-app-test-missing-snapshot-template");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() /
+                                    "tempify-app-test-missing-snapshot-data-home");
     const std::filesystem::path template_path = create_required_only_template(template_root.path());
-    write_text_file(template_path / "tests" / "missing_snapshot" / "answers.json", "{\n  \"required_name\": \"App\"\n}\n");
+    write_text_file(template_path / "tests" / "missing_snapshot" / "answers.json",
+                    "{\n  \"required_name\": \"App\"\n}\n");
 
     tempify::TempifyApp app;
     REQUIRE_THROWS_AS(app.run({"test", template_path.string()}), tempify::TempifyError);
 }
 
 TEST_CASE(TempifyApp_test_rejects_fixture_bad_lock_snapshot_path) {
-    ScopedDirectoryCleanup template_root(std::filesystem::temp_directory_path() / "tempify-app-test-bad-lock-path-template");
-    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() / "tempify-app-test-bad-lock-path-data-home");
+    ScopedDirectoryCleanup template_root(std::filesystem::temp_directory_path() /
+                                         "tempify-app-test-bad-lock-path-template");
+    ScopedTempifyDataHome data_home(std::filesystem::temp_directory_path() /
+                                    "tempify-app-test-bad-lock-path-data-home");
     const std::filesystem::path template_path = create_required_only_template(template_root.path());
     write_text_file(template_path / "tests" / "bad_lock" / "answers.json", "{\n  \"required_name\": \"App\"\n}\n");
     write_text_file(template_path / "tests" / "bad_lock" / "snapshot" / "README.md", "# App\n");

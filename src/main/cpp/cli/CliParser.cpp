@@ -1,10 +1,9 @@
 #include "tempify/cli/CliParser.h"
 
-#include <CLI/CLI.hpp>
-
 #include "tempify/support/Errors.h"
 #include "tempify/support/Version.h"
 
+#include <CLI/CLI.hpp>
 #include <algorithm>
 #include <cctype>
 
@@ -12,18 +11,17 @@ namespace tempify {
 
 namespace {
 
-bool is_help_token(const std::string& arg) {
+bool is_help_token(const std::string &arg) {
     return arg == "-h" || arg == "--help";
 }
 
-bool is_questions_token(const std::string& arg) {
+bool is_questions_token(const std::string &arg) {
     return arg == "-q" || arg == "--questions";
 }
 
 std::string lowercase(std::string value) {
-    std::transform(value.begin(), value.end(), value.begin(), [](const unsigned char ch) {
-        return static_cast<char>(std::tolower(ch));
-    });
+    std::transform(value.begin(), value.end(), value.begin(),
+                   [](const unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
     return value;
 }
 
@@ -41,13 +39,12 @@ HookAcceptance parse_hook_acceptance(std::string value) {
     throw TempifyError("Invalid value for `--accept-hooks`: " + value + ". Expected yes, ask, or no.");
 }
 
-bool contains_help_token(const std::vector<std::string>& args, const std::size_t start_index = 0) {
-    return std::ranges::any_of(args.begin() + static_cast<std::ptrdiff_t>(start_index),
-                               args.end(),
-                               [](const std::string& arg) { return is_help_token(arg); });
+bool contains_help_token(const std::vector<std::string> &args, const std::size_t start_index = 0) {
+    return std::ranges::any_of(args.begin() + static_cast<std::ptrdiff_t>(start_index), args.end(),
+                               [](const std::string &arg) { return is_help_token(arg); });
 }
 
-bool contains_value(const std::vector<std::string>& args, const std::string& value) {
+bool contains_value(const std::vector<std::string> &args, const std::string &value) {
     return std::ranges::find(args, value) != args.end();
 }
 
@@ -58,7 +55,7 @@ CliRequest help_request(const HelpTopic topic) {
     return request;
 }
 
-CliRequest reapply_help_request(const std::vector<std::string>& args) {
+CliRequest reapply_help_request(const std::vector<std::string> &args) {
     CliRequest request = help_request(HelpTopic::Render);
     request.reapply = true;
     if (args.size() > 1 && !is_help_token(args[1]) && !args[1].starts_with('-')) {
@@ -70,7 +67,7 @@ CliRequest reapply_help_request(const std::vector<std::string>& args) {
     return request;
 }
 
-std::pair<std::string, std::string> split_assignment(const std::string& value) {
+std::pair<std::string, std::string> split_assignment(const std::string &value) {
     const std::size_t separator = value.find('=');
     if (separator == std::string::npos || separator == 0) {
         throw TempifyError("Expected assignment in form key=value, got: " + value);
@@ -79,22 +76,22 @@ std::pair<std::string, std::string> split_assignment(const std::string& value) {
     return {value.substr(0, separator), value.substr(separator + 1)};
 }
 
-bool parse_cli_args(CLI::App& app, const std::vector<std::string>& args) {
+bool parse_cli_args(CLI::App &app, const std::vector<std::string> &args) {
     std::vector<std::string> mutable_args = args;
     std::reverse(mutable_args.begin(), mutable_args.end());
     try {
         app.parse(mutable_args);
-    } catch (const CLI::CallForHelp&) {
+    } catch (const CLI::CallForHelp &) {
         return true;
-    } catch (const CLI::ParseError& error) {
+    } catch (const CLI::ParseError &error) {
         throw TempifyError(error.what());
     }
     return false;
 }
 
-CliRequest parse_render_request(const std::vector<std::string>& args);
+CliRequest parse_render_request(const std::vector<std::string> &args);
 
-CliRequest parse_list_request(const std::vector<std::string>& args) {
+CliRequest parse_list_request(const std::vector<std::string> &args) {
     CliRequest request;
     bool json_output = false;
     CLI::App app{"List available templates"};
@@ -109,15 +106,14 @@ CliRequest parse_list_request(const std::vector<std::string>& args) {
     return request;
 }
 
-CliRequest parse_info_request(const std::vector<std::string>& args) {
+CliRequest parse_info_request(const std::vector<std::string> &args) {
     CliRequest request;
     std::string template_ref;
     bool json_output = false;
 
     CLI::App app{"Show template details"};
     app.set_help_flag("-h,--help", "Show help");
-    app.add_option("template-id", template_ref, "Template id or template path")
-        ->required();
+    app.add_option("template-id", template_ref, "Template id or template path")->required();
     app.add_flag("--json", json_output, "Output machine-readable JSON template details");
     if (parse_cli_args(app, args)) {
         request.mode = CliMode::Help;
@@ -131,7 +127,7 @@ CliRequest parse_info_request(const std::vector<std::string>& args) {
     return request;
 }
 
-CliRequest parse_doctor_request(const std::vector<std::string>& args) {
+CliRequest parse_doctor_request(const std::vector<std::string> &args) {
     CliRequest request;
     bool json_output = false;
     CLI::App app{"Inspect Tempify environment"};
@@ -148,14 +144,13 @@ CliRequest parse_doctor_request(const std::vector<std::string>& args) {
     return request;
 }
 
-CliRequest parse_completion_request(const std::vector<std::string>& args) {
+CliRequest parse_completion_request(const std::vector<std::string> &args) {
     CliRequest request;
     std::string shell;
 
     CLI::App app{"Generate shell completion script"};
     app.set_help_flag("-h,--help", "Show help");
-    app.add_option("shell", shell, "Shell name: bash, zsh, fish")
-        ->required();
+    app.add_option("shell", shell, "Shell name: bash, zsh, fish")->required();
     if (parse_cli_args(app, args)) {
         request.mode = CliMode::Help;
         request.help_topic = HelpTopic::Completion;
@@ -171,15 +166,14 @@ CliRequest parse_completion_request(const std::vector<std::string>& args) {
     return request;
 }
 
-CliRequest parse_validate_request(const std::vector<std::string>& args) {
+CliRequest parse_validate_request(const std::vector<std::string> &args) {
     CliRequest request;
     std::string template_ref;
     bool json_output = false;
 
     CLI::App app{"Validate template structure and references"};
     app.set_help_flag("-h,--help", "Show help");
-    app.add_option("template-id", template_ref, "Template id or template path")
-        ->required();
+    app.add_option("template-id", template_ref, "Template id or template path")->required();
     app.add_flag("--json", json_output, "Output machine-readable JSON validation result");
     if (parse_cli_args(app, args)) {
         request.mode = CliMode::Help;
@@ -193,15 +187,14 @@ CliRequest parse_validate_request(const std::vector<std::string>& args) {
     return request;
 }
 
-CliRequest parse_inspect_request(const std::vector<std::string>& args) {
+CliRequest parse_inspect_request(const std::vector<std::string> &args) {
     CliRequest request;
     std::string template_ref;
     bool json_output = false;
 
     CLI::App app{"Inspect merged template graph and provenance"};
     app.set_help_flag("-h,--help", "Show help");
-    app.add_option("template-id", template_ref, "Template id or template path")
-        ->required();
+    app.add_option("template-id", template_ref, "Template id or template path")->required();
     app.add_flag("--json", json_output, "Output machine-readable JSON inspection report");
     if (parse_cli_args(app, args)) {
         request.mode = CliMode::Help;
@@ -215,15 +208,14 @@ CliRequest parse_inspect_request(const std::vector<std::string>& args) {
     return request;
 }
 
-CliRequest parse_lint_request(const std::vector<std::string>& args) {
+CliRequest parse_lint_request(const std::vector<std::string> &args) {
     CliRequest request;
     std::string template_ref;
     bool json_output = false;
 
     CLI::App app{"Lint template quality and authoring issues"};
     app.set_help_flag("-h,--help", "Show help");
-    app.add_option("template-id", template_ref, "Template id or template path")
-        ->required();
+    app.add_option("template-id", template_ref, "Template id or template path")->required();
     app.add_flag("--json", json_output, "Output machine-readable JSON lint report");
     if (parse_cli_args(app, args)) {
         request.mode = CliMode::Help;
@@ -237,7 +229,7 @@ CliRequest parse_lint_request(const std::vector<std::string>& args) {
     return request;
 }
 
-CliRequest parse_test_request(const std::vector<std::string>& args) {
+CliRequest parse_test_request(const std::vector<std::string> &args) {
     CliRequest request;
     std::string template_ref;
     std::string fixture_name;
@@ -247,8 +239,7 @@ CliRequest parse_test_request(const std::vector<std::string>& args) {
 
     CLI::App app{"Run template fixtures and compare snapshots"};
     app.set_help_flag("-h,--help", "Show help");
-    app.add_option("template-id", template_ref, "Template id or template path")
-        ->required();
+    app.add_option("template-id", template_ref, "Template id or template path")->required();
     app.add_option("--fixture", fixture_name, "Run single named fixture");
     app.add_flag("--list-fixtures", list_fixtures, "List fixture names without running them");
     app.add_flag("--json", json_output, "Output machine-readable JSON test report");
@@ -270,7 +261,7 @@ CliRequest parse_test_request(const std::vector<std::string>& args) {
     return request;
 }
 
-CliRequest parse_questions_request(const std::vector<std::string>& args) {
+CliRequest parse_questions_request(const std::vector<std::string> &args) {
     CliRequest request;
     if (args.size() < 2 || !is_questions_token(args[1])) {
         throw TempifyError("Question overview syntax is `tempify <template-id> -q|--questions [--json] [--full]`.");
@@ -279,7 +270,7 @@ CliRequest parse_questions_request(const std::vector<std::string>& args) {
     request.template_ref = args[0];
 
     for (std::size_t index = 2; index < args.size(); ++index) {
-        const auto& arg = args[index];
+        const auto &arg = args[index];
         if (arg == "--json") {
             request.questions_output_format = QuestionsOutputFormat::Json;
             continue;
@@ -296,7 +287,7 @@ CliRequest parse_questions_request(const std::vector<std::string>& args) {
     return request;
 }
 
-CliRequest parse_refresh_request(const std::vector<std::string>& args) {
+CliRequest parse_refresh_request(const std::vector<std::string> &args) {
     CliRequest request;
     bool json_output = false;
     CLI::App app{"Refresh shared template index"};
@@ -311,13 +302,13 @@ CliRequest parse_refresh_request(const std::vector<std::string>& args) {
     return request;
 }
 
-CliRequest parse_reapply_request(const std::vector<std::string>& args) {
+CliRequest parse_reapply_request(const std::vector<std::string> &args) {
     std::vector<std::string> render_args(args.begin() + 1, args.end());
     render_args.push_back("--reapply");
     return parse_render_request(render_args);
 }
 
-CliRequest parse_render_request(const std::vector<std::string>& args) {
+CliRequest parse_render_request(const std::vector<std::string> &args) {
     CliRequest request;
     std::string render_template_ref;
     std::string render_target_dir;
@@ -334,11 +325,9 @@ CliRequest parse_render_request(const std::vector<std::string>& args) {
 
     CLI::App app{"Tempify template generator"};
     app.set_help_flag("-h,--help", "Show help");
-    app.add_option("template-id", render_template_ref, "Template id or template path")
-        ->required();
+    app.add_option("template-id", render_template_ref, "Template id or template path")->required();
     app.add_option("target", render_target_dir, "Target directory");
-    app.add_option("--set,--var", assignments, "Set template variable in form key=value")
-        ->allow_extra_args(false);
+    app.add_option("--set,--var", assignments, "Set template variable in form key=value")->allow_extra_args(false);
     app.add_option("--answers", answers_file, "Load answer values from JSON file");
     app.add_option("--write-answers", write_answers_file, "Write resolved answers to JSON file after generation");
     app.add_flag("-f,--overwrite-if-exists", overwrite_if_exists, "Replace conflicting output files");
@@ -348,11 +337,14 @@ CliRequest parse_render_request(const std::vector<std::string>& args) {
     app.add_flag("--tui", request.use_tui, "Use wizard frontend");
     app.add_flag("--non-interactive", request.non_interactive, "Fail instead of prompting for missing answers");
     app.add_flag("--strict", request.strict, "Reject unknown or invalid imported answers");
-    app.add_flag("--diff", request.diff_only, "Compare managed output against target without writing files or running hooks");
-    app.add_flag("--reapply", request.reapply, "Apply safe managed-file updates to existing target when origin lock permits");
+    app.add_flag("--diff", request.diff_only,
+                 "Compare managed output against target without writing files or running hooks");
+    app.add_flag("--reapply", request.reapply,
+                 "Apply safe managed-file updates to existing target when origin lock permits");
     app.add_flag("--report", reapply_report, "With --reapply, print reapply report only without writing files");
     app.add_flag("--json", json_output, "Output diff report as JSON when used with --diff");
-    app.add_option("--hook-timeout-ms", hook_timeout_ms, "Abort hook phases that exceed this timeout in milliseconds (0 disables)");
+    app.add_option("--hook-timeout-ms", hook_timeout_ms,
+                   "Abort hook phases that exceed this timeout in milliseconds (0 disables)");
     app.add_flag("--dry-run", request.dry_run, "Show build plan without writing files or running hooks");
     app.add_flag("--plan-json", request.plan_json, "Output build plan as JSON");
 
@@ -433,16 +425,16 @@ CliRequest parse_render_request(const std::vector<std::string>& args) {
     if (!render_target_dir.empty()) {
         request.target_dir = render_target_dir;
     }
-    for (const std::string& assignment : assignments) {
+    for (const std::string &assignment : assignments) {
         const auto [key, value] = split_assignment(assignment);
         request.variables[key] = value;
     }
     return request;
 }
 
-}
+} // namespace
 
-CliRequest CliParser::parse(const std::vector<std::string>& args) const {
+CliRequest CliParser::parse(const std::vector<std::string> &args) const {
     CliRequest request;
 
     if (args.empty()) {
@@ -517,7 +509,8 @@ CliRequest CliParser::parse(const std::vector<std::string>& args) const {
     }
 
     if (args.size() >= 3 && !args[0].starts_with('-') && !args[1].starts_with('-') && is_questions_token(args[2])) {
-        throw TempifyError("Question overview does not accept target path. Use `tempify <template-id> -q|--questions [--json] [--full]`." );
+        throw TempifyError("Question overview does not accept target path. Use `tempify <template-id> -q|--questions "
+                           "[--json] [--full]`.");
     }
 
     if (!args.empty() && !is_help_token(args[0]) && contains_help_token(args, 1)) {
@@ -538,15 +531,15 @@ CliRequest CliParser::parse(const std::vector<std::string>& args) const {
     }
 
     if (args[0] == "schema") {
-        throw TempifyError("Command `schema` removed. Use `tempify <template-id> -q|--questions`." );
+        throw TempifyError("Command `schema` removed. Use `tempify <template-id> -q|--questions`.");
     }
 
     if (args[0] == "questions") {
-        throw TempifyError("Command `questions` removed. Use `tempify <template-id> -q|--questions`." );
+        throw TempifyError("Command `questions` removed. Use `tempify <template-id> -q|--questions`.");
     }
 
     if (args[0] == "registry") {
-        throw TempifyError("Command `registry` removed. Use shared local template store and `tempify refresh`." );
+        throw TempifyError("Command `registry` removed. Use shared local template store and `tempify refresh`.");
     }
 
     if (args[0] == "-p" || args[0] == "--prebyte") {
@@ -608,4 +601,4 @@ CliRequest CliParser::parse(const std::vector<std::string>& args) const {
     return parse_render_request(args);
 }
 
-}
+} // namespace tempify

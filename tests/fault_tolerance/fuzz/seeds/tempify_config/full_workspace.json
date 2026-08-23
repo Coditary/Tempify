@@ -1,0 +1,11 @@
+{
+  "defaults": {
+    "project_name": "Merged",
+    "namespace": "merged_ns"
+  },
+  "render": {
+    "accept_hooks": "ask",
+    "hook_timeout_ms": 250,
+    "existing_path_behavior": "error"
+  }
+}

@@ -1,0 +1,1 @@
+basic_cpp my-app --reapply --diff --plan-json --hook-timeout-ms 2500

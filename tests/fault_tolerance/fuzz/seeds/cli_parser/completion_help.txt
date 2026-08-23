@@ -1,0 +1,6 @@
+completion bash
+completion zsh
+completion fish
+--help
+-h
+prebyte --help

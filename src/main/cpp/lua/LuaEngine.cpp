@@ -8,13 +8,13 @@ namespace tempify {
 
 namespace {
 
-std::vector<std::string> effective_group_order(const TemplateManifest& manifest) {
+std::vector<std::string> effective_group_order(const TemplateManifest &manifest) {
     if (!manifest.question_group_order.empty()) {
         return manifest.question_group_order;
     }
 
     std::vector<std::string> groups;
-    for (const auto& question : manifest.questions) {
+    for (const auto &question : manifest.questions) {
         if (std::ranges::find(groups, question.group) == groups.end()) {
             groups.push_back(question.group);
         }
@@ -22,27 +22,36 @@ std::vector<std::string> effective_group_order(const TemplateManifest& manifest)
     return groups;
 }
 
-std::string escape_json(const std::string& value) {
+std::string escape_json(const std::string &value) {
     std::string escaped;
     escaped.reserve(value.size());
     for (const char ch : value) {
         switch (ch) {
-        case '\\': escaped += "\\\\"; break;
-        case '"': escaped += "\\\""; break;
-        case '\n': escaped += "\\n"; break;
-        case '\r': escaped += "\\r"; break;
-        case '\t': escaped += "\\t"; break;
-        default: escaped.push_back(ch); break;
+        case '\\':
+            escaped += "\\\\";
+            break;
+        case '"':
+            escaped += "\\\"";
+            break;
+        case '\n':
+            escaped += "\\n";
+            break;
+        case '\r':
+            escaped += "\\r";
+            break;
+        case '\t':
+            escaped += "\\t";
+            break;
+        default:
+            escaped.push_back(ch);
+            break;
         }
     }
     return escaped;
 }
 
-void append_json_string_field(std::vector<std::string>& fields,
-                              const std::string& indent,
-                              const std::string& name,
-                              const std::string& value,
-                              const bool full) {
+void append_json_string_field(std::vector<std::string> &fields, const std::string &indent, const std::string &name,
+                              const std::string &value, const bool full) {
     if (!full && value.empty()) {
         return;
     }
@@ -50,11 +59,8 @@ void append_json_string_field(std::vector<std::string>& fields,
     fields.push_back(indent + "\"" + name + "\": \"" + escape_json(value) + "\"");
 }
 
-void append_json_bool_field(std::vector<std::string>& fields,
-                            const std::string& indent,
-                            const std::string& name,
-                            const bool value,
-                            const bool full) {
+void append_json_bool_field(std::vector<std::string> &fields, const std::string &indent, const std::string &name,
+                            const bool value, const bool full) {
     if (!full && !value) {
         return;
     }
@@ -62,11 +68,8 @@ void append_json_bool_field(std::vector<std::string>& fields,
     fields.push_back(indent + "\"" + name + "\": " + (value ? "true" : "false"));
 }
 
-void append_json_array_field(std::vector<std::string>& fields,
-                             const std::string& indent,
-                             const std::string& name,
-                             const std::vector<std::string>& values,
-                             const bool full) {
+void append_json_array_field(std::vector<std::string> &fields, const std::string &indent, const std::string &name,
+                             const std::vector<std::string> &values, const bool full) {
     if (!full && values.empty()) {
         return;
     }
@@ -83,8 +86,7 @@ void append_json_array_field(std::vector<std::string>& fields,
     fields.push_back(stream.str());
 }
 
-void write_json_fields(std::ostringstream& stream,
-                       const std::vector<std::string>& fields) {
+void write_json_fields(std::ostringstream &stream, const std::vector<std::string> &fields) {
     for (std::size_t index = 0; index < fields.size(); ++index) {
         stream << fields[index];
         if (index + 1 < fields.size()) {
@@ -94,10 +96,9 @@ void write_json_fields(std::ostringstream& stream,
     }
 }
 
-}
+} // namespace
 
-std::string LuaEngine::export_questions_json(const TemplateManifest& manifest,
-                                             const bool full) const {
+std::string LuaEngine::export_questions_json(const TemplateManifest &manifest, const bool full) const {
     std::ostringstream stream;
     std::vector<std::string> template_fields;
     template_fields.push_back("    \"id\": \"" + escape_json(manifest.info.id) + "\"");
@@ -119,11 +120,11 @@ std::string LuaEngine::export_questions_json(const TemplateManifest& manifest,
     stream << "  \"questions\": {\n";
 
     for (std::size_t group_index = 0; group_index < group_order.size(); ++group_index) {
-        const auto& group_name = group_order[group_index];
+        const auto &group_name = group_order[group_index];
         stream << "    \"" << escape_json(group_name) << "\": [\n";
 
         bool wrote_question = false;
-        for (const auto& question : manifest.questions) {
+        for (const auto &question : manifest.questions) {
             if (question.group != group_name) {
                 continue;
             }
@@ -135,16 +136,9 @@ std::string LuaEngine::export_questions_json(const TemplateManifest& manifest,
             append_json_bool_field(fields, "        ", "optional", question.optional, full);
             append_json_bool_field(fields, "        ", "sensitive", question.sensitive, full);
             append_json_string_field(fields, "        ", "help", question.help, full);
-            append_json_bool_field(fields,
-                                   "        ",
-                                   "has_condition",
-                                   question.condition_is_function || question.condition_value.has_value(),
-                                   full);
-            append_json_bool_field(fields,
-                                   "        ",
-                                   "has_validate",
-                                   question.validate_is_function,
-                                   full);
+            append_json_bool_field(fields, "        ", "has_condition",
+                                   question.condition_is_function || question.condition_value.has_value(), full);
+            append_json_bool_field(fields, "        ", "has_validate", question.validate_is_function, full);
             append_json_array_field(fields, "        ", "aliases", question.aliases, full);
             append_json_array_field(fields, "        ", "choices", question.choices, full);
 
@@ -171,4 +165,4 @@ std::string LuaEngine::export_questions_json(const TemplateManifest& manifest,
     return stream.str();
 }
 
-}
+} // namespace tempify
